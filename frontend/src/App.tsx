@@ -9,6 +9,8 @@ import IntakeFlow from './pages/intake/IntakeFlow';
 import CaptureScreen from './pages/CaptureScreen';
 import ProcessingScreen from './pages/ProcessingScreen';
 import ProgressTab from './pages/progress/ProgressTab';
+import ExercisesHub from './pages/exercises/ExercisesHub';
+import ExerciseDetail from './pages/exercises/ExerciseDetail';
 import ComingSoon from './pages/placeholders/ComingSoon';
 import { getToken } from './lib/api';
 
@@ -41,7 +43,8 @@ function App() {
             <Route path="/workout" element={<WorkoutTab />} />
             <Route path="/workout/:sessionId" element={<PlanView />} />
             <Route path="/progress" element={<ProgressTab />} />
-            <Route path="/exercises" element={<ComingSoon title="Exercises" />} />
+            <Route path="/exercises" element={<ExercisesHub />} />
+            <Route path="/exercises/detail" element={<ExerciseDetail />} />
             <Route path="/nutrition" element={<ComingSoon title="Nutrition" />} />
           </Route>
           <Route path="/intake" element={<IntakeFlow />} />
