@@ -33,10 +33,20 @@ def migrate() -> None:
 
     migrated = 0
     skipped = 0
+    malformed = 0
     for doc in mongo_users.find({}):
         # Old Mongo _id becomes the new user_id — preserves any external
         # references (e.g. JWTs already issued with the old id as `sub`).
         user_id = str(doc["_id"])
+
+        # Records from the pre-username/password schema (Google Sign-In:
+        # google_sub/email/name, no username/password_hash) have no home in
+        # the new table — skip rather than crash, so one legacy leftover
+        # doesn't block migrating every valid user behind it.
+        if "username" not in doc or "password_hash" not in doc:
+            print(f"Skipping malformed doc {user_id} (missing username/password_hash): {doc}")
+            malformed += 1
+            continue
 
         existing = table.get_item(Key={"user_id": user_id}).get("Item")
         if existing:
@@ -56,7 +66,7 @@ def migrate() -> None:
         })
         migrated += 1
 
-    print(f"Migrated {migrated} users, skipped {skipped} already present.")
+    print(f"Migrated {migrated} users, skipped {skipped} already present, {malformed} malformed/legacy skipped.")
 
 
 if __name__ == "__main__":
