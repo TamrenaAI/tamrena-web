@@ -1,42 +1,22 @@
 """
-Shared MongoDB client — this service's OWN database, never Tamreena_AI's.
+Shared DynamoDB client — this service's OWN table, never Tamreena_AI's.
 """
 
 from typing import Optional
 
-from pymongo import MongoClient
-from pymongo.database import Database
-from pymongo.errors import OperationFailure
+import boto3
 
-from app.config import MONGO_DB_NAME, MONGO_URI
+from app.config import AWS_REGION, DYNAMODB_TABLE_NAME
 
-_client: Optional[MongoClient] = None
+_resource: Optional["boto3.resources.base.ServiceResource"] = None
 
 
-def get_client() -> MongoClient:
-    global _client
-    if _client is None:
-        _client = MongoClient(MONGO_URI)
-    return _client
+def get_resource():
+    global _resource
+    if _resource is None:
+        _resource = boto3.resource("dynamodb", region_name=AWS_REGION)
+    return _resource
 
 
-def get_db() -> Database:
-    return get_client()[MONGO_DB_NAME]
-
-
-def ensure_indexes() -> None:
-    db = get_db()
-
-    # Drop indexes from the removed Google-auth schema. Idempotent: a
-    # brand-new database never had these, so IndexNotFound is expected
-    # and safe to ignore — this only matters for existing deployments
-    # migrating from the old schema (see the DuplicateKeyError this
-    # caused live: a null google_sub collided on the second real signup,
-    # since Mongo's unique index only tolerates one null value).
-    for stale_index in ("google_sub_1", "email_1"):
-        try:
-            db.users.drop_index(stale_index)
-        except OperationFailure:
-            pass
-
-    db.users.create_index("username", unique=True)
+def get_users_table():
+    return get_resource().Table(DYNAMODB_TABLE_NAME)
