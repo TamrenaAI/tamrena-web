@@ -37,6 +37,24 @@ async function parseErrorMessage(res: Response, fallback: string): Promise<strin
   return fallback;
 }
 
+/**
+ * Authenticated fetch: attaches the stored Bearer token, and on a 401
+ * clears it and hard-redirects to /signin — covers expired/invalid tokens
+ * from any BFF call, proxied or not.
+ */
+async function authFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const headers = new Headers(options.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    clearToken();
+    window.location.href = '/signin';
+  }
+  return res;
+}
+
 export async function signUp(username: string, password: string, confirmPassword: string): Promise<SessionResponse> {
   const res = await fetch(`${API_BASE_URL}/auth/signup`, {
     method: 'POST',
@@ -62,12 +80,135 @@ export async function logIn(username: string, password: string): Promise<Session
 }
 
 export async function getMe(): Promise<SessionResponse['user']> {
-  const token = getToken();
-  const res = await fetch(`${API_BASE_URL}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await authFetch('/auth/me');
   if (!res.ok) {
     throw new Error(`Failed to fetch current user (${res.status})`);
   }
   return res.json();
+}
+
+// ── Workout (proxied to Tamreena_AI via this BFF) ──────────────────────
+
+export interface IntakeAnswers {
+  goal: string;
+  days_per_week: number;
+  experience: 'beginner' | 'intermediate' | 'advanced';
+  session_duration: string;
+  injuries?: string;
+  priority?: string;
+  age?: number;
+  sleep_quality?: string;
+  job_type?: string;
+  current_program?: string;
+}
+
+export interface WorkoutSession {
+  session_id: string;
+  goal: string | null;
+  status: 'generating' | 'ready' | 'failed';
+  error: string | null;
+  created_at: string;
+  intake: IntakeAnswers | null;
+  previous_session_id: string | null;
+  eligible_for_review: boolean;
+}
+
+export interface SessionPlanResponse {
+  status: 'ready' | 'pending';
+  plan: string | null;
+}
+
+export interface ValidateImageResponse {
+  valid: boolean;
+  stage: string | null;
+  issue: string | null;
+}
+
+export interface GeneratePlanResponse {
+  session_id: string;
+  inbody: Record<string, unknown>;
+}
+
+export interface ExerciseFeedback {
+  name: string;
+  muscle_group?: string;
+  completed?: boolean;
+  difficulty: 'too_easy' | 'just_right' | 'too_hard';
+  pain?: boolean;
+  note?: string;
+}
+
+export interface ExerciseAdjustment {
+  exercise_name: string;
+  new_exercise_name: string | null;
+  sets: number | null;
+  reps: string | null;
+  rpe: number | null;
+  reason: string;
+}
+
+export interface WorkoutFeedbackResponse {
+  feedback_recorded: boolean;
+  adjustment_triggered: boolean;
+  summary: string | null;
+  adjustments: ExerciseAdjustment[];
+}
+
+export async function getSessions(): Promise<WorkoutSession[]> {
+  const res = await authFetch('/api/workout/sessions');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load sessions (${res.status})`));
+  const body = await res.json();
+  return body.sessions;
+}
+
+export async function getSessionPlan(sessionId: string): Promise<SessionPlanResponse> {
+  const res = await authFetch(`/api/workout/sessions/${sessionId}/plan`);
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load plan (${res.status})`));
+  return res.json();
+}
+
+export async function submitFeedback(
+  sessionId: string,
+  dayLabel: string,
+  exercises: ExerciseFeedback[],
+): Promise<WorkoutFeedbackResponse> {
+  const res = await authFetch(`/api/workout/feedback/${sessionId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ day_label: dayLabel, exercises }),
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to submit feedback (${res.status})`));
+  return res.json();
+}
+
+export async function validateImage(file: File): Promise<ValidateImageResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await authFetch('/api/workout/validate-image', { method: 'POST', body: formData });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to validate image (${res.status})`));
+  return res.json();
+}
+
+export async function generatePlan(intake: IntakeAnswers, inbodyFile: File): Promise<GeneratePlanResponse> {
+  const formData = new FormData();
+  formData.append('inbody_file', inbodyFile);
+  formData.append('goal', intake.goal);
+  formData.append('days_per_week', String(intake.days_per_week));
+  formData.append('experience', intake.experience);
+  formData.append('session_duration', intake.session_duration);
+  if (intake.injuries) formData.append('injuries', intake.injuries);
+  if (intake.priority) formData.append('priority', intake.priority);
+  if (intake.age !== undefined) formData.append('age', String(intake.age));
+  if (intake.sleep_quality) formData.append('sleep_quality', intake.sleep_quality);
+  if (intake.job_type) formData.append('job_type', intake.job_type);
+  if (intake.current_program) formData.append('current_program', intake.current_program);
+
+  const res = await authFetch('/api/workout/generate-plan', { method: 'POST', body: formData });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to generate plan (${res.status})`));
+  return res.json();
+}
+
+export function getGeneratePlanStreamUrl(sessionId: string): string {
+  const token = getToken();
+  return `${API_BASE_URL}/api/workout/generate-plan/stream/${sessionId}?token=${encodeURIComponent(token ?? '')}`;
 }
