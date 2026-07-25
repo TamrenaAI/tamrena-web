@@ -393,3 +393,100 @@ export function getLiveSessionWebSocketUrl(exerciseId: string, videoId: string):
   const wsBase = API_BASE_URL.replace(/^http/, 'ws');
   return `${wsBase}/ws/live-session?exercise=${encodeURIComponent(exerciseId)}&video=${encodeURIComponent(videoId)}&token=${encodeURIComponent(token ?? '')}`;
 }
+
+// ── Nutrition (proxied to Nutrition-Plan-Generation via this BFF) ──────
+
+export interface NutritionIntakeAnswers {
+  age: number;
+  gender: 'male' | 'female';
+  height_cm: number;
+  weight_kg: number;
+  goal: 'fat_loss' | 'weight_loss' | 'muscle_gain' | 'bulking' | 'maintenance' | 'recomposition';
+  activity_level: 'sedentary' | 'lightly_active' | 'moderate' | 'very_active' | 'extra_active';
+  diet_type: 'normal' | 'vegetarian' | 'vegan' | 'keto' | 'high_protein';
+  preferences: string[];
+  allergies: string[];
+  additional_notes?: string;
+}
+
+export interface NutritionGenerateResponse {
+  run_id: string;
+  status: string;
+  message: string;
+}
+
+export async function generateNutritionPlan(answers: NutritionIntakeAnswers): Promise<NutritionGenerateResponse> {
+  const res = await authFetch('/api/nutrition/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...answers, meal_generation_mode: 'dataset' }),
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to start nutrition plan generation (${res.status})`));
+  return res.json();
+}
+
+export function getNutritionStreamUrl(runId: string): string {
+  const token = getToken();
+  return `${API_BASE_URL}/api/nutrition/stream/${runId}?token=${encodeURIComponent(token ?? '')}`;
+}
+
+export interface NutritionFoodItem {
+  name: string;
+  serving_grams: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
+export interface NutritionMeal {
+  meal_name: string;
+  foods: NutritionFoodItem[];
+  total_calories: number;
+  total_protein_g: number;
+  total_carbs_g: number;
+  total_fat_g: number;
+}
+
+export interface NutritionMealPlan {
+  breakfast: NutritionMeal;
+  lunch: NutritionMeal;
+  dinner: NutritionMeal;
+  snack: NutritionMeal | null;
+  total_daily_calories: number;
+  total_daily_protein_g: number;
+  total_daily_carbs_g: number;
+  total_daily_fat_g: number;
+  notes: string | null;
+}
+
+export interface NutritionMacroResult {
+  target_calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
+export interface NutritionExplanation {
+  summary: string;
+  calorie_rationale: string;
+  macro_rationale: string;
+  food_selection_rationale: string;
+  adherence_tips: string[];
+}
+
+export interface NutritionResult {
+  run_id: string;
+  success: boolean;
+  macro_result: NutritionMacroResult | null;
+  meal_plan: NutritionMealPlan | null;
+  explanation: NutritionExplanation | null;
+  error: string | null;
+}
+
+export async function getNutritionResult(runId: string): Promise<NutritionResult | null> {
+  const res = await authFetch(`/api/nutrition/result/${runId}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load nutrition result (${res.status})`));
+  return res.json();
+}
