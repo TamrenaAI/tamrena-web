@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { AuthProvider } from './lib/auth-context';
+import { AuthProvider, useAuth } from './lib/auth-context';
 import AuthScreen from './pages/AuthScreen';
 import ProtectedLayout from './components/shell/ProtectedLayout';
 import Home from './pages/Home';
@@ -9,10 +9,24 @@ import IntakeFlow from './pages/intake/IntakeFlow';
 import CaptureScreen from './pages/CaptureScreen';
 import ProcessingScreen from './pages/ProcessingScreen';
 import ComingSoon from './pages/placeholders/ComingSoon';
+import { getToken } from './lib/api';
 
 function SignInRoute() {
   const navigate = useNavigate();
-  return <AuthScreen onSignedIn={() => navigate('/')} />;
+  const { refresh } = useAuth();
+
+  if (getToken()) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <AuthScreen
+      onSignedIn={async () => {
+        await refresh();
+        navigate('/');
+      }}
+    />
+  );
 }
 
 function App() {
