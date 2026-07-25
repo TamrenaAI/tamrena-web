@@ -212,3 +212,76 @@ export function getGeneratePlanStreamUrl(sessionId: string): string {
   const token = getToken();
   return `${API_BASE_URL}/api/workout/generate-plan/stream/${sessionId}?token=${encodeURIComponent(token ?? '')}`;
 }
+
+// ── Progress (proxied to Tamreena_AI via this BFF) ──────────────────────
+
+export interface ScanRecord {
+  id: string;
+  user_id: string;
+  session_id: string | null;
+  skeletal_muscle_mass_kg: number;
+  body_fat_percent: number;
+  bmr_kcal: number | null;
+  arm_asymmetry: boolean;
+  arm_diff_grams: number;
+  leg_asymmetry: boolean;
+  leg_diff_grams: number;
+  elevated_bf: boolean;
+  trunk_underdeveloped: boolean;
+  created_at: string;
+}
+
+export interface ScanComparison {
+  latest: ScanRecord;
+  previous: ScanRecord;
+  delta: {
+    skeletal_muscle_mass_kg: number;
+    body_fat_percent: number;
+    arm_asymmetry_resolved: boolean;
+    leg_asymmetry_resolved: boolean;
+    trunk_underdeveloped_resolved: boolean;
+  };
+}
+
+export interface ProgressReport {
+  old_session_id: string;
+  new_session_id: string;
+  summary: Record<string, unknown>;
+  narrative: string;
+  created_at: string;
+}
+
+export interface MonthlyReviewResponse {
+  session_id: string;
+  inbody: Record<string, unknown>;
+  progress_report: string;
+}
+
+export async function getScans(): Promise<ScanRecord[]> {
+  const res = await authFetch('/api/progress/scans');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load scan history (${res.status})`));
+  const body = await res.json();
+  return body.scans;
+}
+
+export async function getComparison(): Promise<ScanComparison | null> {
+  const res = await authFetch('/api/progress/comparison');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load comparison (${res.status})`));
+  const body = await res.json();
+  return body.comparison;
+}
+
+export async function getProgressReport(sessionId: string): Promise<ProgressReport | null> {
+  const res = await authFetch(`/api/progress/${sessionId}/report`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load progress report (${res.status})`));
+  return res.json();
+}
+
+export async function startMonthlyReview(sessionId: string, inbodyFile: File): Promise<MonthlyReviewResponse> {
+  const formData = new FormData();
+  formData.append('inbody_file', inbodyFile);
+  const res = await authFetch(`/api/progress/${sessionId}/monthly-review`, { method: 'POST', body: formData });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to start monthly review (${res.status})`));
+  return res.json();
+}
