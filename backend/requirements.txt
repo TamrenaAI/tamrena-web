@@ -3,5 +3,9 @@ uvicorn[standard]
 pymongo
 pyjwt
 google-auth
+requests
 python-dotenv
 pydantic
+pytest
+mongomock
+httpx

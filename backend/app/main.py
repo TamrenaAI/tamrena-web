@@ -2,10 +2,22 @@
 FastAPI application entry point for the Tamreena Web BFF.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Tamreena Web BFF")
+from app.auth import routes as auth_routes
+from app.db import ensure_indexes
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    ensure_indexes()
+    yield
+
+
+app = FastAPI(title="Tamreena Web BFF", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,3 +30,6 @@ app.add_middleware(
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+app.include_router(auth_routes.router, tags=["auth"])
