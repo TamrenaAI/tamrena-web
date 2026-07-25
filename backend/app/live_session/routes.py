@@ -7,13 +7,18 @@ session's result). The WebSocket live-tracking proxy is added onto this
 same router in a later change — see live_session_proxy below.
 """
 
+import asyncio
+import json
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, UploadFile
+import websockets
+from fastapi import APIRouter, Depends, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.routing import APIWebSocketRoute
 from pydantic import BaseModel
 
 from app.auth.dependencies import get_verified_token
+from app.auth.tokens import InvalidSessionToken, decode_access_token
 from app.config import CV_API_URL
 from app.db import get_live_sessions_table
 from app.tamreena_client import call_upstream, proxy_json
@@ -51,3 +56,72 @@ async def save_live_session_result(body: LiveSessionResultRequest, token: str = 
     }
     get_live_sessions_table().put_item(Item=item)
     return item
+
+
+_CV_WS_URL = CV_API_URL.replace("http://", "ws://").replace("https://", "wss://")
+
+
+async def live_session_proxy(websocket: WebSocket, exercise: str, video: str, token: str):
+    """
+    Proxies to Computer-Vision's real /ws/live?exercise=&source=video&video=
+    upload:<id> endpoint, relaying binary JPEG frames and JSON state/end/
+    error events downstream, and the browser's {"action":"stop"} command
+    upstream. token is a query param (not a header) because the browser's
+    native WebSocket API cannot set custom headers on the handshake — same
+    constraint already solved for the SSE stream in app/workout/routes.py.
+
+    Registered directly (not via @router.websocket) and appended to
+    router.routes below: router carries prefix="/api/live-session" (set in
+    Task 2 for the HTTP routes above), and APIRouter.websocket() always
+    builds the final path as `self.prefix + path` with no per-route
+    opt-out. Going through the decorator here would register this at
+    /api/live-session/ws/live-session instead of the documented
+    /ws/live-session. Constructing the APIWebSocketRoute directly and
+    appending it to the same router's .routes list keeps this on the one
+    router object main.py already includes (no main.py change needed)
+    while landing on the correct, unprefixed path.
+    """
+    await websocket.accept()
+
+    try:
+        decode_access_token(token)
+    except InvalidSessionToken:
+        await websocket.send_json({"type": "error", "message": "Invalid or expired session."})
+        await websocket.close()
+        return
+
+    upstream_url = f"{_CV_WS_URL}/ws/live?exercise={exercise}&source=video&video=upload:{video}"
+
+    async with websockets.connect(upstream_url) as upstream:
+
+        async def forward_upstream_to_client() -> None:
+            async for message in upstream:
+                if isinstance(message, (bytes, bytearray)):
+                    await websocket.send_bytes(message)
+                else:
+                    await websocket.send_text(message)
+
+        async def forward_client_to_upstream() -> None:
+            try:
+                while True:
+                    message = await websocket.receive_json()
+                    await upstream.send(json.dumps(message))
+            except WebSocketDisconnect:
+                pass
+
+        forward1 = asyncio.create_task(forward_upstream_to_client())
+        forward2 = asyncio.create_task(forward_client_to_upstream())
+        try:
+            await asyncio.wait({forward1, forward2}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            forward1.cancel()
+            forward2.cancel()
+            try:
+                await websocket.close()
+            except RuntimeError:
+                pass
+
+
+router.routes.append(
+    APIWebSocketRoute("/ws/live-session", endpoint=live_session_proxy, name="live_session_proxy")
+)
