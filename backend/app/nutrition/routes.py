@@ -8,12 +8,16 @@ added onto this same router in a later change — see
 stream_nutrition_progress below.
 """
 
+import json
+from contextlib import AsyncExitStack
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.auth.dependencies import get_verified_token
+from app.auth.dependencies import get_verified_token, get_verified_token_for_stream
 from app.config import NUTRITION_API_URL
 from app.tamreena_client import call_upstream, proxy_json
 
@@ -51,3 +55,48 @@ async def get_nutrition_result(run_id: str, token: str = Depends(get_verified_to
         "GET", f"/api/v1/nutrition/result/{run_id}", token=None, base_url=NUTRITION_API_URL
     )
     return proxy_json(resp)
+
+
+@router.get("/stream/{run_id}")
+async def stream_nutrition_progress(run_id: str, token: str = Depends(get_verified_token_for_stream)):
+    """
+    Proxies Nutrition-Plan-Generation's real SSE progress stream. token is
+    a query param (not a header) because the browser's native EventSource
+    API cannot set custom headers — same constraint already solved for the
+    Workout plan-generation stream in app/workout/routes.py's stream_plan,
+    whose exact structure this mirrors (AsyncExitStack-managed streaming
+    httpx client, raw-byte passthrough, clean JSON on non-200 instead of a
+    hung stream) — the only difference is no Authorization header is
+    forwarded, since this upstream has no auth of its own.
+    """
+    stack = AsyncExitStack()
+    try:
+        client = await stack.enter_async_context(httpx.AsyncClient(base_url=NUTRITION_API_URL, timeout=None))
+        upstream = await stack.enter_async_context(
+            client.stream("GET", f"/api/v1/nutrition/stream/{run_id}")
+        )
+    except httpx.HTTPError as exc:
+        await stack.aclose()
+        raise HTTPException(502, f"Nutrition service unavailable: {exc}") from exc
+
+    if upstream.status_code != 200:
+        error_body = await upstream.aread()
+        await stack.aclose()
+        try:
+            content = json.loads(error_body)
+        except ValueError:
+            content = {"detail": error_body.decode(errors="replace")}
+        return JSONResponse(status_code=upstream.status_code, content=content)
+
+    async def event_generator():
+        try:
+            async for chunk in upstream.aiter_raw():
+                yield chunk
+        finally:
+            await stack.aclose()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
