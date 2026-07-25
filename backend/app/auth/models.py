@@ -13,13 +13,16 @@ from app.db import get_db
 
 
 def _serialize(doc: dict) -> dict:
+    created_at = doc["created_at"]
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
     return {
         "id": str(doc["_id"]),
         "google_sub": doc["google_sub"],
         "email": doc["email"],
         "name": doc.get("name"),
         "picture_url": doc.get("picture_url"),
-        "created_at": doc["created_at"],
+        "created_at": created_at,
     }
 
 

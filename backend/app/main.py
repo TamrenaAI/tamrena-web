@@ -14,6 +14,11 @@ from app.db import ensure_indexes
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     ensure_indexes()
+
+    from app.config import JWT_SECRET
+    if not JWT_SECRET:
+        raise RuntimeError("JWT_SECRET is not set — the service cannot issue or verify sessions without it.")
+
     yield
 
 

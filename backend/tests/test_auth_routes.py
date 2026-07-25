@@ -57,6 +57,19 @@ def test_get_me_without_token_is_rejected():
     assert r.status_code in (401, 403)
 
 
+def test_get_me_created_at_is_tz_aware(monkeypatch):
+    import app.main as m
+
+    monkeypatch.setattr(auth_routes, "ALLOW_DEV_LOGIN", True)
+    client = TestClient(m.app)
+    token = client.post("/auth/dev-login").json()["access_token"]
+
+    r = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    created_at = r.json()["created_at"]
+    assert created_at.endswith("+00:00") or created_at.endswith("Z")
+
+
 def test_google_sign_in_creates_user_from_verified_claims(monkeypatch):
     import app.main as m
 

@@ -40,6 +40,10 @@ function SignIn({ onSignedIn }: SignInProps) {
   }, [onSignedIn]);
 
   const handleGoogleClick = () => {
+    if (!GOOGLE_CLIENT_ID) {
+      setError('Google Sign-In is not configured on this deployment.');
+      return;
+    }
     if (!window.google) {
       setError('Google Sign-In script not loaded.');
       return;
