@@ -61,6 +61,13 @@ def test_generate_rejects_out_of_range_age():
     assert r.status_code == 422
 
 
+def test_generate_rejects_non_dataset_meal_generation_mode():
+    client = _client()
+    body = {**_VALID_BODY, "meal_generation_mode": "llm_arabic"}
+    r = client.post("/api/nutrition/generate", json=body, headers=_auth_header())
+    assert r.status_code == 422
+
+
 @respx.mock
 def test_get_result_forwards_and_omits_auth_header():
     route = respx.get(f"{NUTRITION_API_URL}/api/v1/nutrition/result/abc123").mock(
