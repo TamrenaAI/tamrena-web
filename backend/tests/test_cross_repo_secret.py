@@ -7,10 +7,10 @@ someone changed one repo's secret without changing the other's.
 
 import os
 from pathlib import Path
+from uuid import uuid4
 
 import jwt
 import pytest
-from bson import ObjectId
 
 from app import config
 from app.auth import tokens
@@ -58,7 +58,7 @@ def test_token_minted_with_configured_secret_is_verifiable_by_tamreena_ai():
     fresh from its .env.
     """
     tamreena_ai_secret = _read_tamreena_ai_jwt_secret()
-    token = tokens.create_access_token(user_id=str(ObjectId()))
+    token = tokens.create_access_token(user_id=str(uuid4()))
 
     payload = jwt.decode(token, tamreena_ai_secret, algorithms=["HS256"])
     assert payload["sub"]
