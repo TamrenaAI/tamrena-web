@@ -45,6 +45,8 @@ async def list_cv_exercises(token: str = Depends(get_verified_token)):
 
 @media_router.get("/media/exercises/{path:path}")
 async def proxy_exercise_media(path: str):
+    if ".." in path.split("/"):
+        raise HTTPException(400, "Invalid media path")
     resp = await call_upstream("GET", f"/media/exercises/{path}", token=None)
     if resp.status_code != 200:
         raise HTTPException(resp.status_code, "Media not found")

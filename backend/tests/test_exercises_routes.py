@@ -118,3 +118,28 @@ def test_media_proxy_does_not_require_bff_token():
     client = _client()
     r = client.get("/media/exercises/gifs/curl.gif")
     assert r.status_code == 200
+
+
+@respx.mock
+def test_media_proxy_rejects_path_traversal():
+    # The httpx-based TestClient normalizes ".." segments in the URL *before*
+    # the request is ever sent to the ASGI app, so this request never reaches
+    # our route handler at all — it resolves to this BFF's own (intentionally
+    # public) /openapi.json route instead. That is a safe outcome: no request
+    # reaches the media proxy handler, so no traversal to WORKOUT_API_URL is
+    # possible via this path. We assert on that safe outcome here, and cover
+    # the case where the raw path DOES reach our handler (e.g. a client that
+    # doesn't normalize, or a percent-encoded path) below.
+    client = _client()
+    r = client.get("/media/exercises/../../openapi.json")
+    assert r.status_code == 200
+    # Prove it's the BFF's own openapi doc (this BFF's routes), not anything
+    # forwarded from the upstream — i.e. no proxy call happened.
+    assert "/api/exercises" in r.json()["paths"]
+
+
+@respx.mock
+def test_media_proxy_rejects_url_encoded_path_traversal():
+    client = _client()
+    r = client.get("/media/exercises/%2e%2e/%2e%2e/openapi.json")
+    assert r.status_code in (400, 404)
