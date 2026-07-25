@@ -1,12 +1,10 @@
 fastapi
 uvicorn[standard]
-pymongo
+boto3
 pyjwt
 bcrypt
 python-dotenv
 pydantic
 pytest
-mongomock
+moto[dynamodb]
 httpx
-respx
-python-multipart
