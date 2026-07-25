@@ -11,7 +11,9 @@ import ProcessingScreen from './pages/ProcessingScreen';
 import ProgressTab from './pages/progress/ProgressTab';
 import ExercisesHub from './pages/exercises/ExercisesHub';
 import ExerciseDetail from './pages/exercises/ExerciseDetail';
-import ComingSoon from './pages/placeholders/ComingSoon';
+import NutritionIntake from './pages/nutrition/NutritionIntake';
+import NutritionGenerating from './pages/nutrition/NutritionGenerating';
+import NutritionResults from './pages/nutrition/NutritionResults';
 import LiveSession from './pages/live-session/LiveSession';
 import { getToken } from './lib/api';
 
@@ -46,7 +48,10 @@ function App() {
             <Route path="/progress" element={<ProgressTab />} />
             <Route path="/exercises" element={<ExercisesHub />} />
             <Route path="/exercises/detail" element={<ExerciseDetail />} />
-            <Route path="/nutrition" element={<ComingSoon title="Nutrition" />} />
+            <Route path="/nutrition" element={<Navigate to="/nutrition/intake" replace />} />
+            <Route path="/nutrition/intake" element={<NutritionIntake />} />
+            <Route path="/nutrition/generating" element={<NutritionGenerating />} />
+            <Route path="/nutrition/results/:runId" element={<NutritionResults />} />
           </Route>
           <Route path="/intake" element={<IntakeFlow />} />
           <Route path="/capture" element={<CaptureScreen />} />
