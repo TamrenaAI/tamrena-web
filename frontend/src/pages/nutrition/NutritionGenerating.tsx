@@ -13,7 +13,6 @@ function NutritionGenerating() {
 
   const [statusText, setStatusText] = useState('Starting…');
   const [error, setError] = useState<string | null>(null);
-  const startedRef = useRef(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -21,19 +20,17 @@ function NutritionGenerating() {
       navigate('/nutrition/intake', { replace: true });
       return;
     }
-    if (startedRef.current) return;
-    startedRef.current = true;
 
     const eventSource = new EventSource(getNutritionStreamUrl(state.run_id));
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.status === 'completed') {
+      if (data.node === 'workflow' && data.status === 'completed') {
         eventSource.close();
         eventSourceRef.current = null;
-        navigate(`/nutrition/results/${state.run_id}`, { replace: true });
-      } else if (data.status === 'failed') {
+        navigate(`/nutrition/results/${encodeURIComponent(state.run_id)}`, { replace: true });
+      } else if (data.node === 'workflow' && data.status === 'failed') {
         eventSource.close();
         eventSourceRef.current = null;
         setError(data.reason || data.message || 'Nutrition plan generation failed.');

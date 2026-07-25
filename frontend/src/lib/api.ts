@@ -427,7 +427,7 @@ export async function generateNutritionPlan(answers: NutritionIntakeAnswers): Pr
 
 export function getNutritionStreamUrl(runId: string): string {
   const token = getToken();
-  return `${API_BASE_URL}/api/nutrition/stream/${runId}?token=${encodeURIComponent(token ?? '')}`;
+  return `${API_BASE_URL}/api/nutrition/stream/${encodeURIComponent(runId)}?token=${encodeURIComponent(token ?? '')}`;
 }
 
 export interface NutritionFoodItem {
@@ -485,7 +485,7 @@ export interface NutritionResult {
 }
 
 export async function getNutritionResult(runId: string): Promise<NutritionResult | null> {
-  const res = await authFetch(`/api/nutrition/result/${runId}`);
+  const res = await authFetch(`/api/nutrition/result/${encodeURIComponent(runId)}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load nutrition result (${res.status})`));
   return res.json();

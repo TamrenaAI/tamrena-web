@@ -11,6 +11,7 @@ stream_nutrition_progress below.
 import json
 from contextlib import AsyncExitStack
 from typing import Literal, Optional
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -52,7 +53,7 @@ async def generate_nutrition_plan(body: NutritionGenerateRequest, token: str = D
 @router.get("/result/{run_id}")
 async def get_nutrition_result(run_id: str, token: str = Depends(get_verified_token)):
     resp = await call_upstream(
-        "GET", f"/api/v1/nutrition/result/{run_id}", token=None, base_url=NUTRITION_API_URL
+        "GET", f"/api/v1/nutrition/result/{quote(run_id, safe='')}", token=None, base_url=NUTRITION_API_URL
     )
     return proxy_json(resp)
 
@@ -73,7 +74,7 @@ async def stream_nutrition_progress(run_id: str, token: str = Depends(get_verifi
     try:
         client = await stack.enter_async_context(httpx.AsyncClient(base_url=NUTRITION_API_URL, timeout=None))
         upstream = await stack.enter_async_context(
-            client.stream("GET", f"/api/v1/nutrition/stream/{run_id}")
+            client.stream("GET", f"/api/v1/nutrition/stream/{quote(run_id, safe='')}")
         )
     except httpx.HTTPError as exc:
         await stack.aclose()
