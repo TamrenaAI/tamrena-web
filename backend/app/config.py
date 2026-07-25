@@ -27,3 +27,9 @@ JWT_EXPIRE_MINUTES = 60 * 24 * 30  # 30 days, matches Tamreena_AI's own token li
 # forwards the caller's own Bearer token here — see docs/superpowers/specs/
 # 2026-07-25-website-shell-home-workout-design.md in Tamreena_AI.
 WORKOUT_API_URL = os.getenv("WORKOUT_API_URL", "http://localhost:8001")
+
+# ── Computer-Vision proxy ────────────────────────────────────────────────
+# Base URL for the Computer-Vision service's exercise catalogue API. That
+# service has no auth of its own — see app/tamreena_client.py's
+# call_upstream() for how calls to it omit the Authorization header.
+CV_API_URL = os.getenv("CV_API_URL", "http://localhost:8002")
