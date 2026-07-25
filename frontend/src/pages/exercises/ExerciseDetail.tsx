@@ -18,13 +18,17 @@ function ExerciseDetail() {
   const state = location.state as DetailLocationState | null;
 
   const [tamreenaDetail, setTamreenaDetail] = useState<TamreenaExerciseDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (state?.source === 'tamreena') {
       getTamreenaExerciseDetail(state.item.name)
         .then(setTamreenaDetail)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load exercise detail'));
+        .catch((err) => {
+          // Non-fatal: name, gif, target muscle, and equipment are already known
+          // from router state. Losing the supplemental instructions fetch (e.g. a
+          // fuzzy-match 404) should not blank the rest of the page.
+          console.error('Failed to load exercise detail', err);
+        });
     }
   }, [state]);
 
@@ -32,8 +36,6 @@ function ExerciseDetail() {
     navigate('/exercises', { replace: true });
     return null;
   }
-
-  if (error) return <p style={{ color: '#A83A2E' }}>{error}</p>;
 
   const { source, item } = state;
 
