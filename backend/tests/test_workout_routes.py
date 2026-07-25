@@ -6,6 +6,7 @@ require a live Tamreena_AI instance.
 
 import json
 
+import httpx
 import pytest
 import respx
 from fastapi.testclient import TestClient
@@ -155,3 +156,36 @@ def test_stream_plan_rejects_missing_token():
     client = _client()
     r = client.get("/api/workout/generate-plan/stream/xyz")
     assert r.status_code == 401
+
+
+@respx.mock
+def test_list_sessions_returns_502_on_upstream_connection_failure():
+    respx.get(f"{WORKOUT_API_URL}/sessions").mock(side_effect=httpx.ConnectError("connection refused"))
+    client = _client()
+    r = client.get("/api/workout/sessions", headers=_auth_header())
+    assert r.status_code == 502
+    assert "unavailable" in r.json()["detail"].lower()
+
+
+@respx.mock
+def test_list_sessions_returns_json_envelope_when_upstream_body_is_not_json():
+    respx.get(f"{WORKOUT_API_URL}/sessions").mock(
+        return_value=Response(200, content=b"<html>not json</html>", headers={"content-type": "text/html"})
+    )
+    client = _client()
+    r = client.get("/api/workout/sessions", headers=_auth_header())
+    assert r.status_code == 200
+    assert r.json() == {"detail": "<html>not json</html>"}
+
+
+@respx.mock
+def test_stream_plan_returns_json_error_not_sse_when_upstream_errors():
+    respx.get(f"{WORKOUT_API_URL}/generate-plan/stream/xyz").mock(
+        return_value=Response(404, json={"detail": "Unknown session_id."})
+    )
+    client = _client()
+    token = tokens.create_access_token(user_id="507f1f77bcf86cd799439011")
+    r = client.get(f"/api/workout/generate-plan/stream/xyz?token={token}")
+    assert r.status_code == 404
+    assert r.json() == {"detail": "Unknown session_id."}
+    assert "text/event-stream" not in r.headers.get("content-type", "")
