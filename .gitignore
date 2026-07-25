@@ -7,3 +7,4 @@ dist/
 frontend/dist/
 test-results/
 playwright-report/
+.worktrees/
