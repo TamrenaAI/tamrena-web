@@ -2,8 +2,7 @@ fastapi
 uvicorn[standard]
 pymongo
 pyjwt
-google-auth
-requests
+bcrypt
 python-dotenv
 pydantic
 pytest

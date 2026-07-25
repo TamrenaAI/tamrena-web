@@ -25,5 +25,4 @@ def get_db() -> Database:
 
 def ensure_indexes() -> None:
     db = get_db()
-    db.users.create_index("google_sub", unique=True)
-    db.users.create_index("email", unique=True)
+    db.users.create_index("username", unique=True)

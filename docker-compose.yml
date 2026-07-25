@@ -17,8 +17,8 @@ services:
       start_period: 10s
 
   # DEV-ONLY STACK: frontend runs Vite's dev server (not a production
-  # build), and this compose file's default .env has ALLOW_DEV_LOGIN=true
-  # and wide-open CORS. Do NOT deploy this compose file as-is to any
+  # build), and this compose file's backend has wide-open CORS
+  # (allow_origins=["*"]). Do NOT deploy this compose file as-is to any
   # public-facing environment. A production compose variant is future work.
   backend:
     build:
@@ -37,8 +37,8 @@ services:
         condition: service_healthy
 
   # DEV-ONLY STACK: frontend runs Vite's dev server (not a production
-  # build), and this compose file's default .env has ALLOW_DEV_LOGIN=true
-  # and wide-open CORS. Do NOT deploy this compose file as-is to any
+  # build), and this compose file's backend has wide-open CORS
+  # (allow_origins=["*"]). Do NOT deploy this compose file as-is to any
   # public-facing environment. A production compose variant is future work.
   frontend:
     build:
@@ -50,7 +50,6 @@ services:
       - "5174:5173"
     environment:
       VITE_API_BASE_URL: http://localhost:8010
-      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
     depends_on:
       - backend
 

@@ -21,11 +21,3 @@ MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "tamreena_web")
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 30  # 30 days, matches Tamreena_AI's own token lifetime
-
-GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
-
-# Enables POST /auth/dev-login — mints a session for a fixed test account
-# with NO Google verification. Same rationale/danger as Tamreena_AI's own
-# now-removed dev-login: NEVER set true anywhere but a local dev/test
-# machine. Defaults to disabled (404, not just rejected).
-ALLOW_DEV_LOGIN = os.getenv("ALLOW_DEV_LOGIN", "false").lower() == "true"

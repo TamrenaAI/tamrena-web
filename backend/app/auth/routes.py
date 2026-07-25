@@ -1,33 +1,41 @@
 """
-POST /auth/google — frontend sends the Google ID token from Google Sign-In;
-we verify it, create the user record on first sign-in, and return this
-service's own session JWT.
+POST /auth/signup — creates a new user account (username + password),
+returns this service's own session JWT immediately (auto-login on signup).
+
+POST /auth/login — verifies username + password against the stored hash,
+returns the same session shape. Returns the SAME error message whether the
+username doesn't exist or the password is wrong — never reveal which.
 
 GET /auth/me — returns the signed-in user's profile.
-
-POST /auth/dev-login — same idea as /auth/google but with NO Google
-verification at all; mints a session for a fixed test account. Only exists
-when app.config.ALLOW_DEV_LOGIN is set. Exists for local/E2E testing, since
-driving a real Google OAuth popup in an automated test is impractical.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from app.auth.dependencies import get_current_user
-from app.auth.google_oauth import InvalidGoogleToken, verify_google_id_token
-from app.auth.models import get_or_create_user_by_google
+from app.auth.models import create_user, verify_password
 from app.auth.tokens import create_access_token
-from app.config import ALLOW_DEV_LOGIN
-
-DEV_USER_SUB = "dev-test-user"
-DEV_USER_EMAIL = "dev@tamreena.local"
 
 router = APIRouter()
 
+_USERNAME_PATTERN = r"^[A-Za-z0-9_-]{3,30}$"
 
-class GoogleSignInRequest(BaseModel):
-    id_token: str
+
+class SignUpRequest(BaseModel):
+    username: str = Field(..., pattern=_USERNAME_PATTERN)
+    password: str = Field(..., min_length=8)
+    confirm_password: str
+
+    @model_validator(mode="after")
+    def check_passwords_match(self):
+        if self.password != self.confirm_password:
+            raise ValueError("Passwords do not match.")
+        return self
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 
 class SessionResponse(BaseModel):
@@ -38,35 +46,35 @@ class SessionResponse(BaseModel):
 
 class UserResponse(BaseModel):
     id: str
-    email: str
-    name: str | None
-    picture_url: str | None
+    username: str
     created_at: str
 
 
 def _public_user(user: dict) -> dict:
     return {
         "id": user["id"],
-        "email": user["email"],
-        "name": user["name"],
-        "picture_url": user["picture_url"],
+        "username": user["username"],
         "created_at": user["created_at"].isoformat(),
     }
 
 
-@router.post("/auth/google", response_model=SessionResponse)
-async def sign_in_with_google(body: GoogleSignInRequest):
+@router.post("/auth/signup", response_model=SessionResponse, status_code=201)
+async def signup(body: SignUpRequest):
     try:
-        claims = verify_google_id_token(body.id_token)
-    except InvalidGoogleToken as exc:
-        raise HTTPException(401, f"Google sign-in failed: {exc}") from exc
+        user = create_user(username=body.username, password=body.password)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
 
-    user = get_or_create_user_by_google(
-        sub=claims["sub"],
-        email=claims["email"],
-        name=claims.get("name"),
-        picture_url=claims.get("picture"),
-    )
+    access_token = create_access_token(user_id=user["id"])
+    return SessionResponse(access_token=access_token, user=_public_user(user))
+
+
+@router.post("/auth/login", response_model=SessionResponse)
+async def login(body: LoginRequest):
+    user = verify_password(username=body.username, password=body.password)
+    if user is None:
+        raise HTTPException(401, "Invalid username or password.")
+
     access_token = create_access_token(user_id=user["id"])
     return SessionResponse(access_token=access_token, user=_public_user(user))
 
@@ -74,18 +82,3 @@ async def sign_in_with_google(body: GoogleSignInRequest):
 @router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
     return _public_user(user)
-
-
-@router.post("/auth/dev-login", response_model=SessionResponse)
-async def dev_login():
-    if not ALLOW_DEV_LOGIN:
-        raise HTTPException(404, "Not found.")
-
-    user = get_or_create_user_by_google(
-        sub=DEV_USER_SUB,
-        email=DEV_USER_EMAIL,
-        name="Dev Tester",
-        picture_url=None,
-    )
-    access_token = create_access_token(user_id=user["id"])
-    return SessionResponse(access_token=access_token, user=_public_user(user))
