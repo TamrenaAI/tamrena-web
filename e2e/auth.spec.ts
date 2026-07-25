@@ -20,7 +20,7 @@ test('sign-up creates a real account and reaches the post-sign-in state', async 
   await page.locator('#confirm-password-input').fill('supersecret1');
   await page.locator('#submit-btn').click();
 
-  await expect(page.getByText('Signed in — Home page comes in a later stage.')).toBeVisible();
+  await expect(page.getByText('Welcome to Tamreena')).toBeVisible();
 });
 
 test('sign-in works for an already-registered account', async ({ page, request }) => {
@@ -39,7 +39,7 @@ test('sign-in works for an already-registered account', async ({ page, request }
   await page.locator('#password-input').fill('correctpass1');
   await page.locator('#submit-btn').click();
 
-  await expect(page.getByText('Signed in — Home page comes in a later stage.')).toBeVisible();
+  await expect(page.getByText('Welcome to Tamreena')).toBeVisible();
 });
 
 test('sign-in shows an error for wrong credentials', async ({ page }) => {
