@@ -15,6 +15,7 @@ services:
       - "8010:8000"
     environment:
       WORKOUT_API_URL: http://host.docker.internal:8001
+      CV_API_URL: http://host.docker.internal:8002
     env_file:
       - .env
 

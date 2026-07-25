@@ -41,7 +41,10 @@ function ExercisesHub() {
     navigate('/exercises/detail', { state: { source: 'cv', item } });
   };
 
-  if (error) return <p style={{ color: '#A83A2E' }}>{error}</p>;
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    setError(null);
+  };
 
   return (
     <div>
@@ -50,13 +53,15 @@ function ExercisesHub() {
       </h1>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        <button id="exercises-mode-all" onClick={() => setMode('all')} style={{ fontWeight: mode === 'all' ? 700 : 400 }}>
+        <button id="exercises-mode-all" onClick={() => handleModeChange('all')} style={{ fontWeight: mode === 'all' ? 700 : 400 }}>
           All Exercises
         </button>
-        <button id="exercises-mode-cv" onClick={() => setMode('cv')} style={{ fontWeight: mode === 'cv' ? 700 : 400 }}>
+        <button id="exercises-mode-cv" onClick={() => handleModeChange('cv')} style={{ fontWeight: mode === 'cv' ? 700 : 400 }}>
           CV Trackable
         </button>
       </div>
+
+      {error && <p style={{ color: '#A83A2E' }}>{error}</p>}
 
       {mode === 'all' && tamreenaItems === null && <p>Loading…</p>}
       {mode === 'all' && tamreenaItems && (
