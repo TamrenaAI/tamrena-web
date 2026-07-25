@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+pymongo
+pyjwt
+google-auth
+python-dotenv
+pydantic
