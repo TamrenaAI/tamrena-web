@@ -11,6 +11,7 @@ import asyncio
 import json
 import secrets
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 import websockets
 from fastapi import APIRouter, Depends, File, UploadFile, WebSocket, WebSocketDisconnect
@@ -29,7 +30,7 @@ router = APIRouter(prefix="/api/live-session")
 @router.post("/upload")
 async def upload_live_session_video(file: UploadFile = File(...), token: str = Depends(get_verified_token)):
     file_bytes = await file.read()
-    files = {"file": (file.filename, file_bytes, file.content_type)}
+    files = {"file": (file.filename or "upload.mp4", file_bytes, file.content_type)}
     resp = await call_upstream("POST", "/api/uploads", token=None, base_url=CV_API_URL, files=files)
     return proxy_json(resp)
 
@@ -90,7 +91,7 @@ async def live_session_proxy(websocket: WebSocket, exercise: str, video: str, to
         await websocket.close()
         return
 
-    upstream_url = f"{_CV_WS_URL}/ws/live?exercise={exercise}&source=video&video=upload:{video}"
+    upstream_url = f"{_CV_WS_URL}/ws/live?exercise={quote(exercise, safe='')}&source=video&video=upload:{quote(video, safe='')}"
 
     async with websockets.connect(upstream_url) as upstream:
 

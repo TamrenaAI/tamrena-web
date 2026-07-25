@@ -41,6 +41,15 @@ function LiveSession() {
   // React state; this ref always holds the latest tallies for the "end"
   // event handler to read.
   const liveStateRef = useRef<LiveState>(INITIAL_LIVE_STATE);
+  // ws.onclose/onmessage are assigned once per WebSocket and close over
+  // the phase value at connection time; this ref always holds the
+  // CURRENT phase so onclose can tell an unexpected drop during a live
+  // session apart from a normal close after 'end'/'error'.
+  const phaseRef = useRef<Phase>('upload');
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   useEffect(() => {
     return () => {
@@ -89,10 +98,12 @@ function LiveSession() {
           liveStateRef.current = next;
           setLiveState(next);
         } else if (data.type === 'end') {
+          wsRef.current = null;
           ws.close();
           const current = liveStateRef.current;
           finishSession(data.reps ?? current.reps, current.good, current.bad);
         } else if (data.type === 'error') {
+          wsRef.current = null;
           setError(data.message);
           setPhase('error');
           ws.close();
@@ -106,8 +117,17 @@ function LiveSession() {
     };
 
     ws.onerror = () => {
+      wsRef.current = null;
       setError('Lost connection during the live session.');
       setPhase('error');
+    };
+
+    ws.onclose = (event) => {
+      wsRef.current = null;
+      if (phaseRef.current === 'live' && !event.wasClean) {
+        setError('Lost connection during the live session.');
+        setPhase('error');
+      }
     };
   };
 
@@ -131,6 +151,15 @@ function LiveSession() {
   const handleRetry = () => {
     setError(null);
     setPhase('upload');
+    setFile(null);
+    setLiveState(INITIAL_LIVE_STATE);
+    liveStateRef.current = INITIAL_LIVE_STATE;
+    if (frameUrlRef.current) {
+      URL.revokeObjectURL(frameUrlRef.current);
+      frameUrlRef.current = null;
+    }
+    setFrameUrl(null);
+    setResult(null);
   };
 
   return (

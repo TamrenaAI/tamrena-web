@@ -98,6 +98,25 @@ def test_live_session_proxy_forwards_stop_command_upstream(monkeypatch):
     assert sent == [json.dumps({"action": "stop"})]
 
 
+def test_live_session_proxy_url_encodes_exercise_and_video_params(monkeypatch):
+    captured_uri = {}
+
+    def _fake_connect(uri):
+        captured_uri["uri"] = uri
+        return _FakeUpstreamConnection([], [])
+
+    monkeypatch.setattr(routes.websockets, "connect", _fake_connect)
+
+    client = _client()
+    with client.websocket_connect(
+        f"/ws/live-session?exercise=biceps_curl&video=x%26source%3Dwebcam&token={_token()}"
+    ):
+        pass
+
+    assert "&source=webcam" not in captured_uri["uri"]
+    assert "video=upload:x%26source%3Dwebcam" in captured_uri["uri"]
+
+
 def test_live_session_proxy_rejects_invalid_token():
     client = _client()
     with client.websocket_connect("/ws/live-session?exercise=biceps_curl&video=abc123&token=not-a-real-token") as ws:
