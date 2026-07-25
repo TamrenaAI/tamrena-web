@@ -3,7 +3,7 @@ Tests for app/auth/models.py — create_user, verify_password, get_user_by_usern
 """
 
 import pytest
-from bson import ObjectId
+from uuid import UUID, uuid4
 
 from app.auth import models
 
@@ -13,7 +13,7 @@ def test_create_user_returns_public_shape():
     assert user["username"] == "testuser"  # normalized to lowercase
     assert "password" not in user
     assert "password_hash" not in user
-    assert ObjectId.is_valid(user["id"])
+    UUID(user["id"])  # raises ValueError if not a valid UUID4 string
 
 
 def test_create_user_rejects_duplicate_username_case_insensitive():
@@ -47,8 +47,10 @@ def test_verify_password_fails_with_unknown_username():
 
 
 def test_get_user_by_id_returns_none_for_unknown_id():
-    assert models.get_user_by_id(str(ObjectId())) is None
+    assert models.get_user_by_id(str(uuid4())) is None
 
 
-def test_get_user_by_id_returns_none_for_malformed_id():
-    assert models.get_user_by_id("not-an-objectid") is None
+def test_get_user_by_id_returns_none_for_nonexistent_string_id():
+    # DynamoDB has no ID-format validation (unlike Mongo's ObjectId) — any
+    # string that doesn't match a stored user_id simply isn't found.
+    assert models.get_user_by_id("not-a-real-id") is None
