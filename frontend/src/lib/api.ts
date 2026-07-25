@@ -18,29 +18,45 @@ export interface SessionResponse {
   token_type: string;
   user: {
     id: string;
-    email: string;
-    name: string | null;
-    picture_url: string | null;
+    username: string;
     created_at: string;
   };
 }
 
-export async function signInWithGoogle(idToken: string): Promise<SessionResponse> {
-  const res = await fetch(`${API_BASE_URL}/auth/google`, {
+async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === 'string') return body.detail;
+    if (Array.isArray(body?.detail)) {
+      const messages = body.detail.map((e: { msg?: string }) => e.msg).filter(Boolean);
+      if (messages.length > 0) return messages.join(', ');
+    }
+  } catch {
+    // fall through to fallback
+  }
+  return fallback;
+}
+
+export async function signUp(username: string, password: string, confirmPassword: string): Promise<SessionResponse> {
+  const res = await fetch(`${API_BASE_URL}/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_token: idToken }),
+    body: JSON.stringify({ username, password, confirm_password: confirmPassword }),
   });
   if (!res.ok) {
-    throw new Error(`Sign-in failed (${res.status})`);
+    throw new Error(await parseErrorMessage(res, `Sign up failed (${res.status})`));
   }
   return res.json();
 }
 
-export async function devLogin(): Promise<SessionResponse> {
-  const res = await fetch(`${API_BASE_URL}/auth/dev-login`, { method: 'POST' });
+export async function logIn(username: string, password: string): Promise<SessionResponse> {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
   if (!res.ok) {
-    throw new Error(`Dev login failed (${res.status}) — is ALLOW_DEV_LOGIN=true set on the server?`);
+    throw new Error(await parseErrorMessage(res, `Sign in failed (${res.status})`));
   }
   return res.json();
 }
