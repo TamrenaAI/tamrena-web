@@ -12,6 +12,7 @@ import jwt
 import pytest
 from bson import ObjectId
 
+from app import config
 from app.auth import tokens
 
 TAMREENA_AI_ENV = Path(__file__).resolve().parents[3] / "Tamreena_AI" / ".env"
@@ -30,11 +31,34 @@ def _read_tamreena_ai_jwt_secret() -> str | None:
     _read_tamreena_ai_jwt_secret() is None,
     reason="Tamreena_AI/.env not found at the expected sibling path — skip in environments without that repo checked out",
 )
-def test_token_minted_here_is_verifiable_with_tamreena_ai_secret(monkeypatch):
+def test_configured_secret_matches_tamreena_ai():
+    """
+    The actual configured JWT_SECRET (as loaded from THIS repo's .env into
+    app.config at import time, with zero monkeypatching) must be byte-for-byte
+    identical to Tamreena_AI's own .env JWT_SECRET. This is the real guard —
+    it fails the moment someone changes one repo's secret without the other's.
+    """
     tamreena_ai_secret = _read_tamreena_ai_jwt_secret()
-    monkeypatch.setattr(tokens, "JWT_SECRET", tamreena_ai_secret)
+    assert config.JWT_SECRET == tamreena_ai_secret, (
+        "This repo's configured JWT_SECRET does not match Tamreena_AI's — "
+        "tokens minted here will be rejected by that repo's API. "
+        "Set the exact same value in both .env files."
+    )
+
+
+@pytest.mark.skipif(
+    _read_tamreena_ai_jwt_secret() is None,
+    reason="Tamreena_AI/.env not found at the expected sibling path — skip in environments without that repo checked out",
+)
+def test_token_minted_with_configured_secret_is_verifiable_by_tamreena_ai():
+    """
+    End-to-end proof, using the real configured secret (no monkeypatch):
+    mint a token the normal way, then independently decode it exactly like
+    Tamreena_AI/auth/tokens.py does, using Tamreena_AI's own secret read
+    fresh from its .env.
+    """
+    tamreena_ai_secret = _read_tamreena_ai_jwt_secret()
     token = tokens.create_access_token(user_id=str(ObjectId()))
 
-    # Decode independently, exactly like Tamreena_AI/auth/tokens.py does.
     payload = jwt.decode(token, tamreena_ai_secret, algorithms=["HS256"])
     assert payload["sub"]
