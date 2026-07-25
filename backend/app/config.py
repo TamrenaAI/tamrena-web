@@ -21,3 +21,9 @@ MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "tamreena_web")
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 30  # 30 days, matches Tamreena_AI's own token lifetime
+
+# ── Tamreena_AI proxy ────────────────────────────────────────────────
+# Base URL for Tamreena_AI's plan-generation API. Every workout proxy route
+# forwards the caller's own Bearer token here — see docs/superpowers/specs/
+# 2026-07-25-website-shell-home-workout-design.md in Tamreena_AI.
+WORKOUT_API_URL = os.getenv("WORKOUT_API_URL", "http://localhost:8001")
