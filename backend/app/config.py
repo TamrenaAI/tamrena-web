@@ -34,3 +34,10 @@ WORKOUT_API_URL = os.getenv("WORKOUT_API_URL", "http://localhost:8001")
 # service has no auth of its own — see app/tamreena_client.py's
 # call_upstream() for how calls to it omit the Authorization header.
 CV_API_URL = os.getenv("CV_API_URL", "http://localhost:8002")
+
+# ── Nutrition-Plan-Generation proxy ──────────────────────────────────
+# Base URL for the Nutrition-Plan-Generation service's real macro/meal-plan
+# generation API. That service has no auth of its own — see
+# app/tamreena_client.py's call_upstream() for how calls to it omit the
+# Authorization header.
+NUTRITION_API_URL = os.getenv("NUTRITION_API_URL", "http://localhost:8000")
