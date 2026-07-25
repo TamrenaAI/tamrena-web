@@ -8,3 +8,5 @@ pydantic
 pytest
 moto[dynamodb]
 httpx
+respx
+python-multipart
