@@ -54,3 +54,11 @@ def test_get_user_by_id_returns_none_for_nonexistent_string_id():
     # DynamoDB has no ID-format validation (unlike Mongo's ObjectId) — any
     # string that doesn't match a stored user_id simply isn't found.
     assert models.get_user_by_id("not-a-real-id") is None
+
+
+def test_get_user_by_id_returns_none_for_malformed_input():
+    # Empty string / non-string input used to hit DynamoDB directly and
+    # raise a raw botocore ValidationException instead of degrading to None
+    # the way the old Mongo version did (via InvalidId).
+    assert models.get_user_by_id("") is None
+    assert models.get_user_by_id(None) is None

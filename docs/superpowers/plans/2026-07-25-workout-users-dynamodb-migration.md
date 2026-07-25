@@ -409,10 +409,16 @@ def verify_password(username: str, password: str) -> Optional[dict]:
     return _serialize(item)
 ```
 
-Note on Decision 7 from the design spec: this preserves the exact same check-then-write race
-window the Mongo version had (`if db.users.find_one(...): raise ValueError(...)` there vs.
-`if get_user_by_username(...): raise ValueError(...)` here) — not a regression, just carried
-over as-is per the spec.
+Note on Decision 7 from the design spec: this carries over the same check-then-write pattern
+the Mongo version had (`if db.users.find_one(...): raise ValueError(...)` there vs.
+`if get_user_by_username(...): raise ValueError(...)` here), but it is not the exact same race
+window. The Mongo version had a unique index on `username` as a backstop, so even if two
+concurrent signups both passed the find_one check, the database itself would reject the second
+insert. This DynamoDB version has no such backstop — there is no unique constraint on the
+`username-index` GSI — so a concurrent double-signup with the same username can both succeed at
+the write, leaving two items with the same username and nondeterministic login behavior for
+that username. This is accepted as a tradeoff at the current user count, not a like-for-like
+carryover of the Mongo behavior.
 
 - [ ] **Step 4: Run tests to verify they pass**
 

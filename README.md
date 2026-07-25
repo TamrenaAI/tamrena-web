@@ -6,7 +6,8 @@ Frontend + BFF (backend-for-frontend) for the Tamreena website. Sibling project 
 
 1. `cp .env.example .env`
 2. Set `JWT_SECRET` to the **exact same value** as `Tamreena_AI`'s own `.env`'s `JWT_SECRET` -- this service's tokens must be verifiable by that repo's API. See `Tamreena_AI/docs/superpowers/specs/2026-07-25-bff-auth-handoff-design.md` for why.
-3. `docker compose up --build -d`
+3. Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to valid AWS credentials with access to the DynamoDB table -- the backend now stores users in DynamoDB, and startup will crash-loop without real credentials.
+4. `docker compose up --build -d`
 
 ## Ports
 

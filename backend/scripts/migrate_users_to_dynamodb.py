@@ -2,8 +2,13 @@
 One-off migration: copy every user from the BFF's old Mongo `users`
 collection into the new `workout_users` DynamoDB table.
 
-Run once, after Task 1-8 are deployed and before decommissioning Mongo:
-    python scripts/migrate_users_to_dynamodb.py
+Run once, after Task 1-8 are deployed and before decommissioning Mongo, from
+the `backend/` directory (needed so `app` is importable):
+    PYTHONPATH=. python scripts/migrate_users_to_dynamodb.py
+
+Requires `pymongo` to be installed (`pip install pymongo`) — it is
+intentionally not in requirements.txt since this is a one-shot operational
+script, not part of the running service.
 
 Requires MONGO_URI (pointing at the OLD database, read-only for this
 script) and the usual AWS_REGION/DYNAMODB_TABLE_NAME/credentials the app
@@ -13,7 +18,6 @@ so it's safe to re-run if it's interrupted partway through.
 
 import os
 from datetime import timezone
-from uuid import uuid4
 
 from pymongo import MongoClient
 

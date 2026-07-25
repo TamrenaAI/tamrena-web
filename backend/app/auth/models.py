@@ -24,6 +24,8 @@ def _serialize(item: dict) -> dict:
 
 
 def get_user_by_id(user_id: str) -> Optional[dict]:
+    if not isinstance(user_id, str) or not user_id:
+        return None
     resp = get_users_table().get_item(Key={"user_id": user_id})
     item = resp.get("Item")
     return _serialize(item) if item else None
@@ -42,7 +44,20 @@ def get_user_by_username(username: str) -> Optional[dict]:
 
 
 def create_user(username: str, password: str) -> dict:
-    """Raises ValueError if the (case-insensitive) username is already taken."""
+    """Raises ValueError if the (case-insensitive) username is already taken.
+
+    NOTE ON UNIQUENESS: this is a best-effort check-then-write, not an atomic
+    guarantee. The `get_user_by_username` check above queries an eventually
+    consistent GSI, so there is a small race window where two concurrent
+    signups with the same username could both succeed in writing a user
+    item. If that happens, `get_user_by_username` (and thus login) for that
+    username becomes nondeterministic — it returns whichever of the two
+    items the GSI query happens to return first. There is no
+    ConditionExpression on the put_item below that guards against this: the
+    item's `user_id` is a freshly generated uuid4, so
+    attribute_not_exists(user_id) can never fail and would only be
+    cosmetic. This is an accepted tradeoff at this user count, not a bug.
+    """
     normalized = username.lower()
     if get_user_by_username(normalized):
         raise ValueError("Username is already taken.")
@@ -54,10 +69,7 @@ def create_user(username: str, password: str) -> dict:
         "password_hash": password_hash.decode("utf-8"),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    get_users_table().put_item(
-        Item=item,
-        ConditionExpression="attribute_not_exists(user_id)",
-    )
+    get_users_table().put_item(Item=item)
     return _serialize(item)
 
 
