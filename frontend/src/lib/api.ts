@@ -285,3 +285,71 @@ export async function startMonthlyReview(sessionId: string, inbodyFile: File): P
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to start monthly review (${res.status})`));
   return res.json();
 }
+
+// ── Exercises (proxied to Tamreena_AI and Computer-Vision via this BFF) ─
+
+export interface TamreenaExerciseListItem {
+  name: string;
+  target_muscle: string | null;
+  equipment: string | null;
+  image_url: string | null;
+  gif_url: string | null;
+}
+
+export interface TamreenaExerciseListResponse {
+  exercises: TamreenaExerciseListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface TamreenaExerciseDetail {
+  name: string;
+  target_muscle: string | null;
+  equipment: string | null;
+  instructions: string | null;
+  image_url: string | null;
+  gif_url: string | null;
+  attribution: string | null;
+}
+
+export interface CvExercise {
+  id: string;
+  name: string;
+  description: string;
+  muscle_groups: string[];
+  camera: string;
+  counters: string[];
+  rules: number;
+  image: string | null;
+}
+
+export async function getTamreenaExercises(): Promise<TamreenaExerciseListResponse> {
+  const res = await authFetch('/api/exercises');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load exercises (${res.status})`));
+  return res.json();
+}
+
+export async function getTamreenaExerciseDetail(name: string): Promise<TamreenaExerciseDetail> {
+  const res = await authFetch(`/api/exercises/lookup?name=${encodeURIComponent(name)}`);
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load exercise detail (${res.status})`));
+  return res.json();
+}
+
+export async function getCvExercises(): Promise<CvExercise[]> {
+  const res = await authFetch('/api/exercises/cv');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load CV exercises (${res.status})`));
+  return res.json();
+}
+
+/**
+ * Tamreena_AI's exercise list/lookup responses return image_url/gif_url as
+ * paths relative to Tamreena_AI's own origin (e.g. "/media/exercises/gifs/x.gif").
+ * The BFF proxies that same path shape at its own origin (see Task 4's
+ * media_router), so resolving it just means prefixing with this service's
+ * own base URL instead of leaving it browser-relative (which would resolve
+ * against the frontend's own origin and 404).
+ */
+export function mediaUrl(path: string | null): string | null {
+  return path ? `${API_BASE_URL}${path}` : null;
+}
