@@ -12,6 +12,7 @@ import ProgressTab from './pages/progress/ProgressTab';
 import ExercisesHub from './pages/exercises/ExercisesHub';
 import ExerciseDetail from './pages/exercises/ExerciseDetail';
 import ComingSoon from './pages/placeholders/ComingSoon';
+import LiveSession from './pages/live-session/LiveSession';
 import { getToken } from './lib/api';
 
 function SignInRoute() {
@@ -50,6 +51,7 @@ function App() {
           <Route path="/intake" element={<IntakeFlow />} />
           <Route path="/capture" element={<CaptureScreen />} />
           <Route path="/processing" element={<ProcessingScreen />} />
+          <Route path="/exercises/live-session" element={<LiveSession />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

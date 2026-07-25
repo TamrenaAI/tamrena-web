@@ -79,8 +79,11 @@ function ExerciseDetail() {
             <p style={{ fontSize: '13px', color: '#5B5347', marginBottom: '16px' }}>
               {item.rules} form {item.rules === 1 ? 'rule' : 'rules'} checked live
             </p>
-            <button id="start-live-session-btn" disabled style={{ opacity: 0.6 }}>
-              Start Live Session (Coming soon)
+            <button
+              id="start-live-session-btn"
+              onClick={() => navigate('/exercises/live-session', { state: { exercise: item } })}
+            >
+              Start Live Session
             </button>
           </div>
         </>
