@@ -15,6 +15,7 @@ function ProcessingScreen() {
   const [statusText, setStatusText] = useState('Starting…');
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!state) {
@@ -24,16 +25,16 @@ function ProcessingScreen() {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    let eventSource: EventSource | null = null;
-
     generatePlan(state.intake, state.inbodyFile)
       .then(({ session_id }) => {
         setStatusText('Generating your plan…');
-        eventSource = new EventSource(getGeneratePlanStreamUrl(session_id));
+        const eventSource = new EventSource(getGeneratePlanStreamUrl(session_id));
+        eventSourceRef.current = eventSource;
         eventSource.onmessage = (event) => {
           const data = JSON.parse(event.data);
           if (data.type === 'done') {
-            eventSource?.close();
+            eventSource.close();
+            eventSourceRef.current = null;
             if (data.error) {
               setError(data.error);
             } else {
@@ -44,14 +45,16 @@ function ProcessingScreen() {
           }
         };
         eventSource.onerror = () => {
-          eventSource?.close();
+          eventSource.close();
+          eventSourceRef.current = null;
           setError('Lost connection while generating your plan.');
         };
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to start plan generation'));
 
     return () => {
-      eventSource?.close();
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
     };
   }, [state, navigate]);
 
