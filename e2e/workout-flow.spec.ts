@@ -33,11 +33,7 @@ test('sign-up through a fully generated plan, then submit feedback', async ({ pa
   await page.locator('#intake-step3-continue').click();
 
   await expect(page.getByText('Upload your InBody scan')).toBeVisible();
-  // NOTE: this spec runs from a git worktree nested at
-  // tamreena-web/.worktrees/<branch>/e2e, so it needs one extra level of
-  // ".." compared to the main checkout to reach the sibling Tamreena_AI
-  // repo's sample image (E:\vs codes\Tamreena_AI\samples\inbody2.jfif).
-  const samplePath = path.resolve(__dirname, '../../../../Tamreena_AI/samples/inbody2.jfif');
+  const samplePath = path.resolve(__dirname, '../../Tamreena_AI/samples/inbody2.jfif');
   await page.locator('#capture-file-input').setInputFiles(samplePath);
   await page.locator('#capture-continue-btn').click();
 
