@@ -6,8 +6,8 @@ someone changed one repo's secret without changing the other's.
 """
 
 import os
+import secrets
 from pathlib import Path
-from uuid import uuid4
 
 import jwt
 import pytest
@@ -56,9 +56,25 @@ def test_token_minted_with_configured_secret_is_verifiable_by_tamreena_ai():
     mint a token the normal way, then independently decode it exactly like
     Tamreena_AI/auth/tokens.py does, using Tamreena_AI's own secret read
     fresh from its .env.
+
+    The user_id here MUST match the real shape app.auth.models.create_user
+    generates (24 hex chars via secrets.token_hex(12)), not an arbitrary
+    string — Tamreena_AI's own auth/dependencies.py additionally parses the
+    `sub` claim as bson.ObjectId(sub) and 401s if that fails. A prior
+    version of this test used a UUID4 user_id, which passed this test (a
+    bare truthiness check) while the equivalent real-world case was
+    actually broken — Tamreena_AI rejected every request. This test would
+    not have caught that regression; the ObjectId-shape assertion below
+    closes that gap.
     """
     tamreena_ai_secret = _read_tamreena_ai_jwt_secret()
-    token = tokens.create_access_token(user_id=str(uuid4()))
+    user_id = secrets.token_hex(12)
+    token = tokens.create_access_token(user_id=user_id)
 
     payload = jwt.decode(token, tamreena_ai_secret, algorithms=["HS256"])
-    assert payload["sub"]
+    assert payload["sub"] == user_id
+    # Structurally valid MongoDB ObjectId input: exactly 24 hex characters.
+    # Tamreena_AI's auth/dependencies.py calls bson.ObjectId(sub) on this
+    # claim and 401s if it isn't — this is what a UUID4 sub would fail.
+    assert len(payload["sub"]) == 24
+    int(payload["sub"], 16)  # raises ValueError if not valid hex
