@@ -10,9 +10,9 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / ".env", override=True)
 
-# ── MongoDB (this service's OWN Mongo — never shared with Tamreena_AI's) ──
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27018")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "tamreena_web")
+# ── DynamoDB (this service's OWN table, never Tamreena_AI's) ──────────
+AWS_REGION = os.getenv("AWS_REGION", "eu-north-1")
+DYNAMODB_TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME", "workout_users")
 
 # ── Auth ──────────────────────────────────────────────────────────────
 # JWT_SECRET MUST match Tamreena_AI's own JWT_SECRET exactly — tokens
