@@ -6,7 +6,7 @@ from typing import Optional
 
 import boto3
 
-from app.config import AWS_REGION, DYNAMODB_TABLE_NAME
+from app.config import AWS_REGION, DYNAMODB_TABLE_NAME, LIVE_SESSIONS_TABLE_NAME
 
 _resource: Optional["boto3.resources.base.ServiceResource"] = None
 
@@ -20,3 +20,7 @@ def get_resource():
 
 def get_users_table():
     return get_resource().Table(DYNAMODB_TABLE_NAME)
+
+
+def get_live_sessions_table():
+    return get_resource().Table(LIVE_SESSIONS_TABLE_NAME)

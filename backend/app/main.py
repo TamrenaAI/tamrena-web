@@ -11,6 +11,7 @@ from app.auth import routes as auth_routes
 from app.exercises import routes as exercises_routes
 from app.progress import routes as progress_routes
 from app.workout import routes as workout_routes
+from app.live_session import routes as live_session_routes
 from app.db import get_users_table
 
 
@@ -49,3 +50,4 @@ app.include_router(progress_routes.router, tags=["progress"])
 app.include_router(exercises_routes.router, tags=["exercises"])
 app.include_router(exercises_routes.media_router, tags=["exercises-media"])
 app.include_router(workout_routes.router, tags=["workout"])
+app.include_router(live_session_routes.router, tags=["live-session"])
