@@ -353,3 +353,43 @@ export async function getCvExercises(): Promise<CvExercise[]> {
 export function mediaUrl(path: string | null): string | null {
   return path ? `${API_BASE_URL}${path}` : null;
 }
+
+export interface LiveSessionResult {
+  session_id: string;
+  exercise_id: string;
+  exercise_name: string;
+  reps: number;
+  good: number;
+  bad: number;
+  created_at: string;
+}
+
+export async function uploadLiveSessionVideo(file: File): Promise<{ id: string; name: string; size: number }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await authFetch('/api/live-session/upload', { method: 'POST', body: formData });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to upload video (${res.status})`));
+  return res.json();
+}
+
+export async function saveLiveSessionResult(
+  exerciseId: string,
+  exerciseName: string,
+  reps: number,
+  good: number,
+  bad: number,
+): Promise<LiveSessionResult> {
+  const res = await authFetch('/api/live-session/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ exercise_id: exerciseId, exercise_name: exerciseName, reps, good, bad }),
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to save session result (${res.status})`));
+  return res.json();
+}
+
+export function getLiveSessionWebSocketUrl(exerciseId: string, videoId: string): string {
+  const token = getToken();
+  const wsBase = API_BASE_URL.replace(/^http/, 'ws');
+  return `${wsBase}/ws/live-session?exercise=${encodeURIComponent(exerciseId)}&video=${encodeURIComponent(videoId)}&token=${encodeURIComponent(token ?? '')}`;
+}
