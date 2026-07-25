@@ -8,6 +8,7 @@ import PlanView from './pages/workout/PlanView';
 import IntakeFlow from './pages/intake/IntakeFlow';
 import CaptureScreen from './pages/CaptureScreen';
 import ProcessingScreen from './pages/ProcessingScreen';
+import ProgressTab from './pages/progress/ProgressTab';
 import ComingSoon from './pages/placeholders/ComingSoon';
 import { getToken } from './lib/api';
 
@@ -39,7 +40,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/workout" element={<WorkoutTab />} />
             <Route path="/workout/:sessionId" element={<PlanView />} />
-            <Route path="/progress" element={<ComingSoon title="Progress" />} />
+            <Route path="/progress" element={<ProgressTab />} />
             <Route path="/exercises" element={<ComingSoon title="Exercises" />} />
             <Route path="/nutrition" element={<ComingSoon title="Nutrition" />} />
           </Route>
