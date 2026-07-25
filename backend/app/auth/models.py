@@ -5,9 +5,9 @@ normalized to lowercase for storage and lookup (case-insensitive
 uniqueness, no separate display-casing).
 """
 
+import secrets
 from datetime import datetime, timezone
 from typing import Optional
-from uuid import uuid4
 
 import bcrypt
 from boto3.dynamodb.conditions import Key
@@ -54,9 +54,19 @@ def create_user(username: str, password: str) -> dict:
     username becomes nondeterministic — it returns whichever of the two
     items the GSI query happens to return first. There is no
     ConditionExpression on the put_item below that guards against this: the
-    item's `user_id` is a freshly generated uuid4, so
+    item's `user_id` is a freshly generated random hex id, so
     attribute_not_exists(user_id) can never fail and would only be
     cosmetic. This is an accepted tradeoff at this user count, not a bug.
+
+    NOTE ON ID FORMAT: user_id is 24 random hex characters (secrets.token_hex(12)),
+    not a UUID4 — deliberately, so it's a structurally valid MongoDB ObjectId
+    string. Tamreena_AI's API verifies this service's JWTs by parsing the
+    token's `sub` claim as `bson.ObjectId(sub)` (see auth/dependencies.py's
+    _resolve_user there) and Tamreena_AI's own session/scan documents store
+    `user_id` as an actual ObjectId field — a UUID4 (32 hex chars, dashed)
+    fails that parse and 401s on every cross-service call. This format must
+    stay ObjectId-compatible until Tamreena_AI's user-id handling is
+    redesigned to accept opaque strings.
     """
     normalized = username.lower()
     if get_user_by_username(normalized):
@@ -64,7 +74,7 @@ def create_user(username: str, password: str) -> dict:
 
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
     item = {
-        "user_id": str(uuid4()),
+        "user_id": secrets.token_hex(12),
         "username": normalized,
         "password_hash": password_hash.decode("utf-8"),
         "created_at": datetime.now(timezone.utc).isoformat(),

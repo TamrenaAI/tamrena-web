@@ -3,7 +3,7 @@ Tests for app/auth/models.py — create_user, verify_password, get_user_by_usern
 """
 
 import pytest
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from app.auth import models
 
@@ -13,7 +13,10 @@ def test_create_user_returns_public_shape():
     assert user["username"] == "testuser"  # normalized to lowercase
     assert "password" not in user
     assert "password_hash" not in user
-    UUID(user["id"])  # raises ValueError if not a valid UUID4 string
+    # id must be 24 hex chars — structurally valid as a MongoDB ObjectId
+    # string, since Tamreena_AI parses the JWT subject as bson.ObjectId(sub).
+    assert len(user["id"]) == 24
+    int(user["id"], 16)  # raises ValueError if not valid hex
 
 
 def test_create_user_rejects_duplicate_username_case_insensitive():
