@@ -13,6 +13,7 @@ load_dotenv(dotenv_path=BASE_DIR / ".env", override=True)
 # ── DynamoDB (this service's OWN table, never Tamreena_AI's) ──────────
 AWS_REGION = os.getenv("AWS_REGION", "eu-north-1")
 DYNAMODB_TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME", "workout_users")
+LIVE_SESSIONS_TABLE_NAME = os.getenv("LIVE_SESSIONS_TABLE_NAME", "workout_live_sessions")
 
 # ── Auth ──────────────────────────────────────────────────────────────
 # JWT_SECRET MUST match Tamreena_AI's own JWT_SECRET exactly — tokens
