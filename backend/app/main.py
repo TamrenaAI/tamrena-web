@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import routes as auth_routes
+from app.progress import routes as progress_routes
 from app.workout import routes as workout_routes
 from app.db import get_users_table
 
@@ -43,4 +44,5 @@ def health() -> dict:
 
 
 app.include_router(auth_routes.router, tags=["auth"])
+app.include_router(progress_routes.router, tags=["progress"])
 app.include_router(workout_routes.router, tags=["workout"])
