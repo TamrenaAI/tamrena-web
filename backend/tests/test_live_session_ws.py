@@ -122,3 +122,47 @@ def test_live_session_proxy_rejects_invalid_token():
     with client.websocket_connect("/ws/live-session?exercise=biceps_curl&video=abc123&token=not-a-real-token") as ws:
         message = ws.receive_json()
         assert message["type"] == "error"
+
+
+def test_live_session_proxy_browser_source_omits_video_and_relays_binary_frames(monkeypatch):
+    captured_uri = {}
+    sent = []
+
+    def _fake_connect(uri):
+        captured_uri["uri"] = uri
+        return _FakeUpstreamConnection([], sent)
+
+    monkeypatch.setattr(routes.websockets, "connect", _fake_connect)
+
+    client = _client()
+    with client.websocket_connect(f"/ws/live-session?exercise=biceps_curl&source=browser&token={_token()}") as ws:
+        ws.send_bytes(b"fake-jpeg-bytes")
+        ws.send_json({"action": "stop"})
+
+    assert "source=browser" in captured_uri["uri"]
+    assert "video=" not in captured_uri["uri"]
+    assert sent[0] == b"fake-jpeg-bytes"
+    assert sent[1] == json.dumps({"action": "stop"})
+
+
+def test_live_session_proxy_rejects_video_source_without_video_param():
+    client = _client()
+    with client.websocket_connect(f"/ws/live-session?exercise=biceps_curl&source=video&token={_token()}") as ws:
+        message = ws.receive_json()
+        assert message["type"] == "error"
+
+
+def test_live_session_proxy_defaults_to_video_source_for_backward_compatibility(monkeypatch):
+    captured_uri = {}
+
+    def _fake_connect(uri):
+        captured_uri["uri"] = uri
+        return _FakeUpstreamConnection([], [])
+
+    monkeypatch.setattr(routes.websockets, "connect", _fake_connect)
+
+    client = _client()
+    with client.websocket_connect(f"/ws/live-session?exercise=biceps_curl&video=abc123&token={_token()}"):
+        pass
+
+    assert "source=video&video=upload:abc123" in captured_uri["uri"]

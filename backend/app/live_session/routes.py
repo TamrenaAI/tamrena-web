@@ -11,6 +11,7 @@ import asyncio
 import json
 import secrets
 from datetime import datetime, timezone
+from typing import Optional
 from urllib.parse import quote
 
 import websockets
@@ -62,14 +63,29 @@ async def save_live_session_result(body: LiveSessionResultRequest, token: str = 
 _CV_WS_URL = CV_API_URL.replace("http://", "ws://").replace("https://", "wss://")
 
 
-async def live_session_proxy(websocket: WebSocket, exercise: str, video: str, token: str):
+async def live_session_proxy(
+    websocket: WebSocket,
+    exercise: str,
+    token: str,
+    source: str = "video",
+    video: Optional[str] = None,
+):
     """
-    Proxies to Computer-Vision's real /ws/live?exercise=&source=video&video=
-    upload:<id> endpoint, relaying binary JPEG frames and JSON state/end/
-    error events downstream, and the browser's {"action":"stop"} command
-    upstream. token is a query param (not a header) because the browser's
-    native WebSocket API cannot set custom headers on the handshake — same
-    constraint already solved for the SSE stream in app/workout/routes.py.
+    Proxies to Computer-Vision's real /ws/live?exercise=&source=&video=
+    endpoint, relaying binary JPEG frames and JSON state/end/error events
+    downstream, and the browser's {"action":"stop"} command (plus, for
+    source="browser", the browser's own live JPEG frames) upstream. token is
+    a query param (not a header) because the browser's native WebSocket API
+    cannot set custom headers on the handshake — same constraint already
+    solved for the SSE stream in app/workout/routes.py.
+
+    source="video" (default, backward compatible with every existing
+    caller): analyzes a video previously uploaded via POST
+    /api/live-session/upload; video is required and is the upload id.
+
+    source="browser": no prior upload — the client (its camera, captured to
+    canvas) pushes binary JPEG frames directly over this open socket for
+    live analysis; video is unused.
 
     Registered directly (not via @router.websocket) and appended to
     router.routes below: router carries prefix="/api/live-session" (set in
@@ -91,7 +107,22 @@ async def live_session_proxy(websocket: WebSocket, exercise: str, video: str, to
         await websocket.close()
         return
 
-    upstream_url = f"{_CV_WS_URL}/ws/live?exercise={quote(exercise, safe='')}&source=video&video=upload:{quote(video, safe='')}"
+    if source not in ("video", "browser"):
+        await websocket.send_json({"type": "error", "message": "source must be 'video' or 'browser'."})
+        await websocket.close()
+        return
+
+    if source == "video":
+        if not video:
+            await websocket.send_json({"type": "error", "message": "video is required when source='video'."})
+            await websocket.close()
+            return
+        upstream_url = (
+            f"{_CV_WS_URL}/ws/live?exercise={quote(exercise, safe='')}"
+            f"&source=video&video=upload:{quote(video, safe='')}"
+        )
+    else:
+        upstream_url = f"{_CV_WS_URL}/ws/live?exercise={quote(exercise, safe='')}&source=browser"
 
     async with websockets.connect(upstream_url) as upstream:
 
@@ -105,15 +136,25 @@ async def live_session_proxy(websocket: WebSocket, exercise: str, video: str, to
         async def forward_client_to_upstream() -> None:
             try:
                 while True:
-                    message = await websocket.receive_json()
-                    await upstream.send(json.dumps(message))
+                    message = await websocket.receive()
+                    if message["type"] == "websocket.disconnect":
+                        return
+                    if message.get("bytes") is not None:
+                        await upstream.send(message["bytes"])
+                    elif message.get("text") is not None:
+                        text = message["text"]
+                        try:
+                            parsed = json.loads(text)
+                            await upstream.send(json.dumps(parsed))
+                        except (json.JSONDecodeError, ValueError):
+                            await upstream.send(text)
             except WebSocketDisconnect:
                 pass
 
         forward1 = asyncio.create_task(forward_upstream_to_client())
         forward2 = asyncio.create_task(forward_client_to_upstream())
         try:
-            await asyncio.wait({forward1, forward2}, return_when=asyncio.FIRST_COMPLETED)
+            await asyncio.wait({forward1, forward2}, return_when=asyncio.ALL_COMPLETED)
         finally:
             forward1.cancel()
             forward2.cancel()
