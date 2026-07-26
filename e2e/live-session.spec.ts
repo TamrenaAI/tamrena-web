@@ -17,7 +17,7 @@ test('live session: upload a video, receive a real end event, and see results', 
   await page.locator('#confirm-password-input').fill('supersecret1');
   await page.locator('#submit-btn').click();
 
-  await expect(page.getByText('Welcome to Tamreena')).toBeVisible();
+  await expect(page.getByText('No training protocol yet')).toBeVisible();
 
   await page.getByRole('link', { name: 'Exercises' }).click();
   await page.locator('#exercises-mode-cv').click();
@@ -26,7 +26,7 @@ test('live session: upload a video, receive a real end event, and see results', 
   await expect(firstCard).toBeVisible();
   await firstCard.click();
 
-  await expect(page.getByText('Live Tracking')).toBeVisible();
+  await expect(page.getByText('Live AI Form Tracking')).toBeVisible();
   const startBtn = page.locator('#start-live-session-btn');
   await expect(startBtn).toBeEnabled();
   await startBtn.click();

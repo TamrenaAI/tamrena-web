@@ -36,8 +36,8 @@ WORKOUT_API_URL = os.getenv("WORKOUT_API_URL", "http://localhost:8001")
 CV_API_URL = os.getenv("CV_API_URL", "http://localhost:8002")
 
 # ── Nutrition-Plan-Generation proxy ──────────────────────────────────
-# Base URL for the Nutrition-Plan-Generation service's real macro/meal-plan
-# generation API. That service has no auth of its own — see
-# app/tamreena_client.py's call_upstream() for how calls to it omit the
-# Authorization header.
-NUTRITION_API_URL = os.getenv("NUTRITION_API_URL", "http://localhost:8000")
+# Base URL for the AWS-hosted Nutrition-Plan-Generation service API.
+# Endpoint: http://nutrition-agent.fitness-app-prod.local:8000/generate-plan
+NUTRITION_AGENT_URL = os.getenv("NUTRITION_AGENT_URL", os.getenv("NUTRITION_API_URL", "http://nutrition-agent.fitness-app-prod.local:8000"))
+NUTRITION_API_URL = NUTRITION_AGENT_URL
+

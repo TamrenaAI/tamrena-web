@@ -37,14 +37,7 @@ function LiveSession() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const frameUrlRef = useRef<string | null>(null);
-  // onmessage is assigned once per WebSocket, so it closes over stale
-  // React state; this ref always holds the latest tallies for the "end"
-  // event handler to read.
   const liveStateRef = useRef<LiveState>(INITIAL_LIVE_STATE);
-  // ws.onclose/onmessage are assigned once per WebSocket and close over
-  // the phase value at connection time; this ref always holds the
-  // CURRENT phase so onclose can tell an unexpected drop during a live
-  // session apart from a normal close after 'end'/'error'.
   const phaseRef = useRef<Phase>('upload');
 
   useEffect(() => {
@@ -163,73 +156,138 @@ function LiveSession() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F7F3EC', padding: '48px', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-        <h1 style={{ fontFamily: 'Newsreader, serif', fontSize: '24px', color: '#211C16', marginBottom: '16px' }}>
-          Live Session — {exercise.name}
-        </h1>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-dark)',
+        padding: '48px 24px',
+        fontFamily: 'var(--font-sans)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <div style={{ maxWidth: '580px', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <span className="badge badge-emerald" style={{ marginBottom: '10px' }}>CV Computer Vision HUD</span>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#f8fafc', margin: '0 0 4px 0' }}>
+            Live Session — {exercise.name}
+          </h1>
+          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
+            Real-time pose tracking, rep counting & posture biomechanics
+          </p>
+        </div>
 
         {phase === 'upload' && (
-          <>
-            <input id="live-session-file-input" type="file" accept="video/*" onChange={handleFileChange} />
-            {error && <p style={{ color: '#A83A2E', fontSize: '13px' }}>{error}</p>}
+          <div className="glass-panel" style={{ padding: '36px', textAlign: 'center', background: 'rgba(15, 23, 42, 0.85)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>
+              📹
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#f8fafc', marginBottom: '8px' }}>
+              Select Video File for Form Analysis
+            </h3>
+            <p style={{ fontSize: '13.5px', color: '#94a3b8', marginBottom: '24px' }}>
+              Upload your execution video to launch real-time websocket AI telemetry.
+            </p>
+
+            <input id="live-session-file-input" type="file" accept="video/*" onChange={handleFileChange} className="form-input" style={{ marginBottom: '16px' }} />
+            
+            {error && <p style={{ color: '#fda4af', fontSize: '13px', marginBottom: '16px' }}>⚠️ {error}</p>}
+            
             <button
               id="live-session-start-btn"
               onClick={handleStartAnalysis}
               disabled={!file || uploading}
-              style={{ marginTop: '16px', display: 'block' }}
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '14px', fontSize: '15px' }}
             >
-              {uploading ? 'Starting…' : 'Start Analysis'}
+              {uploading ? 'Analyzing Telemetry...' : 'Start CV Form Analysis'}
             </button>
-          </>
+          </div>
         )}
 
         {phase === 'live' && (
-          <>
+          <div className="glass-panel" style={{ padding: '24px', background: 'rgba(15, 23, 42, 0.9)' }}>
             {frameUrl ? (
               <img
                 id="live-session-frame"
                 src={frameUrl}
                 alt="Live camera view"
-                style={{ width: '100%', borderRadius: '12px', marginBottom: '16px' }}
+                style={{ width: '100%', borderRadius: '14px', marginBottom: '20px', border: '1px solid rgba(16, 185, 129, 0.4)', boxShadow: 'var(--shadow-emerald)' }}
               />
             ) : (
-              <div style={{ width: '100%', height: '240px', backgroundColor: '#F2E2CC', borderRadius: '12px', marginBottom: '16px' }} />
+              <div style={{ width: '100%', height: '280px', background: '#070a11', borderRadius: '14px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }} className="shimmer">
+                Initializing AI Neural Stream...
+              </div>
             )}
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-              <p id="live-session-reps">Reps: {liveState.reps}</p>
-              <p id="live-session-good">Good: {liveState.good}</p>
-              <p id="live-session-bad">Bad: {liveState.bad}</p>
+
+            {/* Rep Counter HUD Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              <div className="glass-panel" style={{ padding: '12px', textAlign: 'center', background: 'rgba(7, 10, 17, 0.7)' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>TOTAL REPS</span>
+                <p id="live-session-reps" className="metric-val" style={{ fontSize: '24px', color: '#f8fafc', margin: '2px 0 0 0' }}>{liveState.reps}</p>
+              </div>
+              <div className="glass-panel" style={{ padding: '12px', textAlign: 'center', background: 'rgba(7, 10, 17, 0.7)' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>PERFECT FORM</span>
+                <p id="live-session-good" className="metric-val" style={{ fontSize: '24px', color: '#34d399', margin: '2px 0 0 0' }}>{liveState.good}</p>
+              </div>
+              <div className="glass-panel" style={{ padding: '12px', textAlign: 'center', background: 'rgba(7, 10, 17, 0.7)' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>FORM BREAK</span>
+                <p id="live-session-bad" className="metric-val" style={{ fontSize: '24px', color: '#f43f5e', margin: '2px 0 0 0' }}>{liveState.bad}</p>
+              </div>
             </div>
+
             {liveState.feedback.length > 0 && (
-              <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2DACB', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>LIVE BIOMECHANICS FEEDBACK</span>
                 {liveState.feedback.map((message, i) => (
-                  <p key={i} style={{ fontSize: '13px', color: '#5B5347', margin: 0 }}>{message}</p>
+                  <p key={i} style={{ fontSize: '13.5px', color: '#cbd5e1', margin: 0 }}>✓ {message}</p>
                 ))}
               </div>
             )}
-            <button id="live-session-end-btn" onClick={handleEndSession}>End Session</button>
-          </>
+
+            <button id="live-session-end-btn" onClick={handleEndSession} className="btn btn-secondary" style={{ width: '100%', borderColor: 'rgba(244, 63, 94, 0.4)', color: '#f43f5e' }}>
+              End Live Session
+            </button>
+          </div>
         )}
 
         {phase === 'complete' && result && (
-          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2DACB', borderRadius: '12px', padding: '24px' }}>
-            <h2 style={{ fontFamily: 'Newsreader, serif', fontSize: '20px', color: '#211C16', marginBottom: '12px' }}>
-              Session Complete
+          <div className="glass-panel" style={{ padding: '36px', textAlign: 'center', background: 'rgba(15, 23, 42, 0.85)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>
+              🎯
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>
+              Session Analysis Complete
             </h2>
-            <p id="live-session-final-reps" style={{ fontSize: '14px', color: '#5B5347' }}>Reps: {result.reps}</p>
-            <p style={{ fontSize: '14px', color: '#5B5347' }}>Good: {result.good}</p>
-            <p style={{ fontSize: '14px', color: '#5B5347', marginBottom: '16px' }}>Bad: {result.bad}</p>
-            <a href="/exercises" id="live-session-back-link" style={{ color: '#B5502E', fontSize: '14px', fontWeight: 600 }}>
-              Back to Exercises →
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+              <div className="glass-panel" style={{ padding: '12px', background: 'rgba(7, 10, 17, 0.6)' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>TOTAL REPS</span>
+                <p id="live-session-final-reps" className="metric-val" style={{ fontSize: '22px', color: '#f8fafc', margin: '2px 0 0 0' }}>{result.reps}</p>
+              </div>
+              <div className="glass-panel" style={{ padding: '12px', background: 'rgba(7, 10, 17, 0.6)' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>GOOD REPS</span>
+                <p style={{ fontSize: '22px', fontWeight: 700, color: '#34d399', margin: '2px 0 0 0' }}>{result.good}</p>
+              </div>
+              <div className="glass-panel" style={{ padding: '12px', background: 'rgba(7, 10, 17, 0.6)' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>BAD REPS</span>
+                <p style={{ fontSize: '22px', fontWeight: 700, color: '#f43f5e', margin: '2px 0 0 0' }}>{result.bad}</p>
+              </div>
+            </div>
+
+            <a href="/exercises" id="live-session-back-link" className="btn btn-primary" style={{ display: 'inline-flex' }}>
+              Return to Exercise Directory →
             </a>
           </div>
         )}
 
         {phase === 'error' && (
-          <div>
-            <p style={{ color: '#A83A2E', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
-            <button id="live-session-retry-btn" onClick={handleRetry}>Try Again</button>
+          <div className="glass-panel" style={{ padding: '36px', textAlign: 'center' }}>
+            <p style={{ color: '#fda4af', fontSize: '14px', marginBottom: '20px' }}>⚠️ {error}</p>
+            <button id="live-session-retry-btn" onClick={handleRetry} className="btn btn-primary">
+              Try Again
+            </button>
           </div>
         )}
       </div>

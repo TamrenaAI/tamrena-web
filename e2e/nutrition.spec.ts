@@ -16,9 +16,9 @@ test('nutrition: submit intake, watch real generation progress, see results', as
   await page.locator('#confirm-password-input').fill('supersecret1');
   await page.locator('#submit-btn').click();
 
-  await expect(page.getByText('Welcome to Tamreena')).toBeVisible();
+  await expect(page.getByText('No training protocol yet')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Nutrition' }).click();
+  await page.getByRole('link', { name: 'Nutrition', exact: true }).click();
   await expect(page).toHaveURL(/\/nutrition\/intake$/);
 
   await page.locator('#nutrition-age').fill('28');

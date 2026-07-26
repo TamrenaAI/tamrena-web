@@ -44,9 +44,14 @@ class NutritionGenerateRequest(BaseModel):
 
 @router.post("/generate")
 async def generate_nutrition_plan(body: NutritionGenerateRequest, token: str = Depends(get_verified_token)):
+    # Upstream AWS endpoint: http://nutrition-agent.fitness-app-prod.local:8000/generate-plan
     resp = await call_upstream(
-        "POST", "/api/v1/nutrition/generate", token=None, base_url=NUTRITION_API_URL, json=body.model_dump()
+        "POST", "/generate-plan", token=None, base_url=NUTRITION_API_URL, json=body.model_dump()
     )
+    if resp.status_code == 404:
+        resp = await call_upstream(
+            "POST", "/api/v1/nutrition/generate", token=None, base_url=NUTRITION_API_URL, json=body.model_dump()
+        )
     return proxy_json(resp)
 
 

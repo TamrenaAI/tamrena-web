@@ -14,7 +14,7 @@ test('progress tab shows empty states for a fresh account with no scans', async 
   await page.locator('#confirm-password-input').fill('supersecret1');
   await page.locator('#submit-btn').click();
 
-  await expect(page.getByText('Welcome to Tamreena')).toBeVisible();
+  await expect(page.getByText('No training protocol yet')).toBeVisible();
 
   await page.getByRole('link', { name: 'Progress' }).click();
   await expect(page.getByRole('heading', { name: 'Progress' })).toBeVisible();
