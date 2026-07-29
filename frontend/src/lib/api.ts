@@ -511,3 +511,39 @@ export async function getNutritionResult(runId: string): Promise<NutritionResult
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load nutrition result (${res.status})`));
   return res.json();
 }
+
+// ── Live Session Report (proxied to CV via this BFF) ────────────────────
+
+export interface CvRepetition {
+  number: number;
+  good: boolean;
+  score: number;
+}
+
+export interface CvRuleDefinition {
+  name: string;
+  severity: string;
+  message: string;
+}
+
+export interface CvSessionSummary {
+  total_reps: number;
+  good_reps: number;
+  bad_reps: number;
+  accuracy: number;
+  score: number | null;
+  common_errors: Record<string, number>;
+  most_common_error: string | null;
+}
+
+export interface CvSessionReport {
+  summary: CvSessionSummary;
+  history: CvRepetition[];
+  rules: CvRuleDefinition[];
+}
+
+export async function getLiveSessionReport(cvSessionId: string): Promise<CvSessionReport> {
+  const res = await authFetch(`/api/live-session/report/${cvSessionId}`);
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load report (${res.status})`));
+  return res.json();
+}
