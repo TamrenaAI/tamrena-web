@@ -399,11 +399,15 @@ export async function saveLiveSessionResult(
   reps: number,
   good: number,
   bad: number,
+  cvSessionId?: string,
 ): Promise<LiveSessionResult> {
   const res = await authFetch('/api/live-session/result', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ exercise_id: exerciseId, exercise_name: exerciseName, reps, good, bad }),
+    body: JSON.stringify({
+      exercise_id: exerciseId, exercise_name: exerciseName, reps, good, bad,
+      cv_session_id: cvSessionId ?? null,
+    }),
   });
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to save session result (${res.status})`));
   return res.json();
