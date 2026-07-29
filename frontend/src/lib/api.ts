@@ -433,6 +433,8 @@ export interface NutritionIntakeAnswers {
   preferences: string[];
   allergies: string[];
   additional_notes?: string;
+  /** "dataset" (English, Egyptian food DB) or "llm_arabic" (Arabic, LLM-generated, 3 plan options). Defaults to "dataset". */
+  meal_generation_mode?: 'dataset' | 'llm_arabic';
 }
 
 export interface NutritionGenerateResponse {
@@ -445,7 +447,7 @@ export async function generateNutritionPlan(answers: NutritionIntakeAnswers): Pr
   const res = await authFetch('/api/nutrition/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...answers, meal_generation_mode: 'dataset' }),
+    body: JSON.stringify({ ...answers, meal_generation_mode: answers.meal_generation_mode ?? 'dataset' }),
   });
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to start nutrition plan generation (${res.status})`));
   return res.json();
@@ -501,11 +503,19 @@ export interface NutritionExplanation {
   adherence_tips: string[];
 }
 
+export interface NutritionTripleMealPlan {
+  option_a: NutritionMealPlan;
+  option_b: NutritionMealPlan;
+  option_c: NutritionMealPlan;
+  notes: string | null;
+}
+
 export interface NutritionResult {
   run_id: string;
   success: boolean;
   macro_result: NutritionMacroResult | null;
   meal_plan: NutritionMealPlan | null;
+  triple_meal_plan: NutritionTripleMealPlan | null;
   explanation: NutritionExplanation | null;
   error: string | null;
 }

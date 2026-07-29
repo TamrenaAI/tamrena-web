@@ -34,6 +34,11 @@ const DIET_OPTIONS: Option<NutritionIntakeAnswers['diet_type']>[] = [
   { value: 'keto', label: 'Keto' },
 ];
 
+const LANGUAGE_OPTIONS: Option<'dataset' | 'llm_arabic'>[] = [
+  { value: 'dataset', label: 'English', sublabel: 'Egyptian food dataset' },
+  { value: 'llm_arabic', label: 'Arabic', sublabel: 'اللغة العربية · 3 plan options' },
+];
+
 // Preset Dropdown Arrays for Non-Typing Selection
 const AGE_DROPDOWN_OPTIONS = Array.from({ length: 70 }, (_, i) => 16 + i); // 16 to 85
 const HEIGHT_DROPDOWN_OPTIONS = Array.from({ length: 81 }, (_, i) => 140 + i); // 140cm to 220cm
@@ -73,6 +78,7 @@ function NutritionIntake() {
   const [preferences, setPreferences] = useState('Chicken breast, Jasmine rice, Eggs, Oats');
   const [allergies, setAllergies] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
+  const [mealGenerationMode, setMealGenerationMode] = useState<'dataset' | 'llm_arabic'>('dataset');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,6 +101,7 @@ function NutritionIntake() {
         preferences: parseList(preferences),
         allergies: parseList(allergies),
         additional_notes: additionalNotes || undefined,
+        meal_generation_mode: mealGenerationMode,
       });
       navigate('/nutrition/generating', { state: { run_id } });
     } catch (err) {
@@ -260,6 +267,11 @@ function NutritionIntake() {
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
                   Custom Preferences & Restrictions
                 </h3>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ marginBottom: '10px' }}>Plan Language</label>
+                <PillGroup options={LANGUAGE_OPTIONS} value={mealGenerationMode} onChange={setMealGenerationMode} idPrefix="nutrition-language" />
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>

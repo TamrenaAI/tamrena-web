@@ -36,10 +36,10 @@ class NutritionGenerateRequest(BaseModel):
     preferences: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
     additional_notes: Optional[str] = Field(default=None, max_length=500)
-    # Locked to "dataset" — this stage never exposes the llm_arabic mode
-    # (triple_meal_plan) in the UI. See docs/superpowers/specs/
-    # 2026-07-25-website-nutrition-design.md's Decisions section.
-    meal_generation_mode: Literal["dataset"] = "dataset"
+    # "dataset" composes meals from the Egyptian food DB in English;
+    # "llm_arabic" lets the LLM freely generate three full-day Arabic meal
+    # plan options (triple_meal_plan) instead of a single meal_plan.
+    meal_generation_mode: Literal["dataset", "llm_arabic"] = "dataset"
 
 
 @router.post("/generate")

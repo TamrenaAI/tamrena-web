@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getNutritionResult, type NutritionResult, type NutritionMeal } from '../../lib/api';
+import { getNutritionResult, type NutritionResult, type NutritionMeal, type NutritionMealPlan } from '../../lib/api';
 
-function MealCard({ meal, index }: { meal: NutritionMeal; index: number }) {
+/** Arabic text uses Unicode range U+0600–U+06FF; detect it to switch to RTL layout. */
+const isArabicText = (text: string): boolean => /[؀-ۿ]/.test(text);
+
+function MealCard({ meal, index, rtl }: { meal: NutritionMeal; index: number; rtl: boolean }) {
   return (
-    <div className="glass-panel" style={{ padding: '24px', marginBottom: '20px' }}>
+    <div className="glass-panel" style={{ padding: '24px', marginBottom: '20px' }} dir={rtl ? 'rtl' : 'ltr'}>
       {/* Meal Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -26,7 +29,7 @@ function MealCard({ meal, index }: { meal: NutritionMeal; index: number }) {
           <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(7, 10, 17, 0.6)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
             <div>
               <span style={{ fontSize: '14.5px', fontWeight: 600, color: '#f8fafc' }}>{food.name}</span>
-              <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '8px' }}>({food.serving_grams}g serving)</span>
+              <span style={{ fontSize: '12px', color: '#64748b', margin: rtl ? '0 8px 0 0' : '0 0 0 8px' }}>({food.serving_grams}g serving)</span>
             </div>
             <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
               <span>{food.calories} <small style={{ color: '#64748b' }}>kcal</small></span>
@@ -53,10 +56,29 @@ function MealCard({ meal, index }: { meal: NutritionMeal; index: number }) {
   );
 }
 
+function DayPlan({ plan, rtl }: { plan: NutritionMealPlan; rtl: boolean }) {
+  return (
+    <div>
+      <MealCard meal={plan.breakfast} index={1} rtl={rtl} />
+      <MealCard meal={plan.lunch} index={2} rtl={rtl} />
+      <MealCard meal={plan.dinner} index={3} rtl={rtl} />
+      {plan.snack && <MealCard meal={plan.snack} index={4} rtl={rtl} />}
+      {plan.notes && (
+        <p dir={rtl ? 'rtl' : 'ltr'} style={{ color: '#94a3b8', fontSize: '13.5px', marginTop: '4px' }}>
+          {plan.notes}
+        </p>
+      )}
+    </div>
+  );
+}
+
+const PLAN_OPTION_LABELS = { option_a: 'Option A', option_b: 'Option B', option_c: 'Option C' } as const;
+
 function NutritionResults() {
   const { runId } = useParams<{ runId: string }>();
   const [result, setResult] = useState<NutritionResult | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [activeOption, setActiveOption] = useState<keyof typeof PLAN_OPTION_LABELS>('option_a');
 
   useEffect(() => {
     if (!runId) return;
@@ -88,7 +110,10 @@ function NutritionResults() {
     );
   }
 
-  const { macro_result, meal_plan, explanation } = result;
+  const { macro_result, meal_plan, triple_meal_plan, explanation } = result;
+  const rtl = isArabicText(
+    triple_meal_plan?.option_a.breakfast.meal_name ?? meal_plan?.breakfast.meal_name ?? ''
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -96,7 +121,7 @@ function NutritionResults() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <span className="badge badge-cyan">DATASET NUTRITION MODE</span>
+            <span className="badge badge-cyan">{triple_meal_plan ? 'ARABIC AI NUTRITION MODE' : 'DATASET NUTRITION MODE'}</span>
             <span style={{ fontSize: '12px', color: '#64748b' }}>Generated Today</span>
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
@@ -149,17 +174,44 @@ function NutritionResults() {
         </div>
       )}
 
-      {/* Meal Plan Schedule */}
-      {meal_plan && (
+      {/* Meal Plan Schedule (dataset mode: single English plan) */}
+      {meal_plan && !triple_meal_plan && (
         <div id="nutrition-meal-plan">
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>
             Curated Meal Schedule
           </h2>
+          <DayPlan plan={meal_plan} rtl={false} />
+        </div>
+      )}
 
-          <MealCard meal={meal_plan.breakfast} index={1} />
-          <MealCard meal={meal_plan.lunch} index={2} />
-          <MealCard meal={meal_plan.dinner} index={3} />
-          {meal_plan.snack && <MealCard meal={meal_plan.snack} index={4} />}
+      {/* Triple Meal Plan (llm_arabic mode: 3 full-day Arabic options) */}
+      {triple_meal_plan && (
+        <div id="nutrition-meal-plan">
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }} dir={rtl ? 'rtl' : 'ltr'}>
+            {rtl ? 'خطة الوجبات المقترحة' : 'Curated Meal Schedule'}
+          </h2>
+
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            {(Object.keys(PLAN_OPTION_LABELS) as Array<keyof typeof PLAN_OPTION_LABELS>).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveOption(key)}
+                className={activeOption === key ? 'btn btn-cyan' : 'btn btn-secondary'}
+                style={{ padding: '10px 20px', fontSize: '14px' }}
+              >
+                {PLAN_OPTION_LABELS[key]}
+              </button>
+            ))}
+          </div>
+
+          <DayPlan plan={triple_meal_plan[activeOption]} rtl={rtl} />
+
+          {triple_meal_plan.notes && (
+            <p dir={rtl ? 'rtl' : 'ltr'} style={{ color: '#94a3b8', fontSize: '13.5px' }}>
+              {triple_meal_plan.notes}
+            </p>
+          )}
         </div>
       )}
 
