@@ -55,13 +55,20 @@ function NutritionGenerating() {
     };
   }, [state, navigate]);
 
+  // Each entry's `nodes` lists every graph node name (see Nutrition-Plan-Generation's
+  // stream_service.py NODE_PROGRESS map) that should light up this UI step — the
+  // dataset and llm_arabic pipelines use different node names for meal composition.
   const steps = [
-    { id: 'profile', label: 'User Biometrics & Goals' },
-    { id: 'calories', label: 'BMR & Caloric Target Calculation' },
-    { id: 'macros', label: 'Macronutrient Split (Protein/Carbs/Fat)' },
-    { id: 'meal_composition', label: 'Meal Dataset Matching & Composition' },
-    { id: 'validation', label: 'Nutrition Rules Validation' },
-    { id: 'explanation', label: 'AI Rationale & Guidelines' },
+    { id: 'profile', label: 'User Biometrics & Goals', nodes: ['profile'] },
+    { id: 'calories', label: 'BMR & Caloric Target Calculation', nodes: ['calories'] },
+    { id: 'macros', label: 'Macronutrient Split (Protein/Carbs/Fat)', nodes: ['macros'] },
+    {
+      id: 'meal_composition',
+      label: 'Meal Dataset Matching & Composition',
+      nodes: ['meal_distributor', 'retrieve_foods', 'compose_meal', 'compose_meals_iterative', 'increment_retry'],
+    },
+    { id: 'validation', label: 'Nutrition Rules Validation', nodes: ['validate'] },
+    { id: 'explanation', label: 'AI Rationale & Guidelines', nodes: ['explain'] },
   ];
 
   if (error) {
@@ -113,7 +120,7 @@ function NutritionGenerating() {
         {/* Pipeline Step Progress */}
         <div style={{ textAlign: 'left', background: 'rgba(7, 10, 17, 0.6)', borderRadius: '14px', padding: '18px 20px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
           {steps.map((step, i) => {
-            const isCurrent = step.id === currentNode;
+            const isCurrent = step.nodes.includes(currentNode);
             return (
               <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: i < steps.length - 1 ? '1px solid rgba(255, 255, 255, 0.06)' : 'none' }}>
                 <div
@@ -121,11 +128,11 @@ function NutritionGenerating() {
                     width: '10px',
                     height: '10px',
                     borderRadius: '50%',
-                    backgroundColor: isCurrent ? '#06b6d4' : 'rgba(148, 163, 184, 0.3)',
-                    boxShadow: isCurrent ? '0 0 10px #06b6d4' : 'none',
+                    backgroundColor: isCurrent ? '#10b981' : 'rgba(148, 163, 184, 0.3)',
+                    boxShadow: isCurrent ? '0 0 10px #10b981' : 'none',
                   }}
                 />
-                <span style={{ fontSize: '13.5px', fontWeight: isCurrent ? 700 : 400, color: isCurrent ? '#38bdf8' : '#64748b' }}>
+                <span style={{ fontSize: '13.5px', fontWeight: isCurrent ? 700 : 400, color: isCurrent ? '#34d399' : '#64748b' }}>
                   {step.label}
                 </span>
               </div>
