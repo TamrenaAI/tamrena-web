@@ -35,7 +35,9 @@ async def call_upstream(
         return None
 
 
-def proxy_json(response: httpx.Response) -> JSONResponse:
+def proxy_json(response: Optional[httpx.Response]) -> JSONResponse:
+    if response is None:
+        return JSONResponse(status_code=502, content={"detail": "Upstream service unavailable"})
     try:
         content = response.json()
     except ValueError:

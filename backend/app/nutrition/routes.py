@@ -48,7 +48,7 @@ async def generate_nutrition_plan(body: NutritionGenerateRequest, token: str = D
     resp = await call_upstream(
         "POST", "/generate-plan", token=None, base_url=NUTRITION_API_URL, json=body.model_dump()
     )
-    if resp.status_code == 404:
+    if resp is not None and resp.status_code == 404:
         resp = await call_upstream(
             "POST", "/api/v1/nutrition/generate", token=None, base_url=NUTRITION_API_URL, json=body.model_dump()
         )
