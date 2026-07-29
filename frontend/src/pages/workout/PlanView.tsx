@@ -16,7 +16,6 @@ function PlanView() {
 
   const [activeDayId, setActiveDayId] = useState<number | null>(null);
 
-  const [selectedExercise, setSelectedExercise] = useState<ParsedExercise | null>(null);
   const [dayLabel, setDayLabel] = useState<string>('');
   const [exerciseName, setExerciseName] = useState<string>('');
   const [difficulty, setDifficulty] = useState<ExerciseFeedback['difficulty']>('just_right');
@@ -30,13 +29,24 @@ function PlanView() {
     getSessionPlan(sessionId)
       .then((data) => {
         setPlanData(data);
-        if (data.days && data.days.length > 0) {
-          setActiveDayId((current) => current ?? data.days![0].day_number);
-          setDayLabel((current) => current || data.days![0].label);
-          const firstDay = data.days[0];
-          if (firstDay.exercises.length > 0) {
-            setExerciseName((current) => current || firstDay.exercises[0].name);
-          }
+        const freshDays = data.days ?? [];
+        if (freshDays.length > 0) {
+          setActiveDayId((current) => current ?? freshDays[0].day_number);
+
+          // Resync the feedback form's day/exercise selection against the
+          // refetched data. This matters most right after a swap-triggered
+          // refetch: the previously-selected exercise name may no longer
+          // exist under its old day (it was renamed by the AI adjustment),
+          // so keep the current selection only if it's still valid —
+          // otherwise fall back to the day's first exercise, same pattern
+          // used in handleDaySelectChange.
+          const resolvedDayLabel = dayLabel || freshDays[0].label;
+          const dayForLabel = freshDays.find((d) => d.label === resolvedDayLabel) ?? freshDays[0];
+          setDayLabel(resolvedDayLabel);
+
+          const exerciseStillExists =
+            !!exerciseName && dayForLabel.exercises.some((ex) => ex.name === exerciseName);
+          setExerciseName(exerciseStillExists ? exerciseName : dayForLabel.exercises[0]?.name ?? '');
         }
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load plan'));
@@ -53,12 +63,10 @@ function PlanView() {
     const dayObj = days.find((d) => d.label === newDayLabel);
     if (dayObj && dayObj.exercises.length > 0) {
       setExerciseName(dayObj.exercises[0].name);
-      setSelectedExercise(dayObj.exercises[0]);
     }
   };
 
   const handleOpenFeedback = (exercise: ParsedExercise) => {
-    setSelectedExercise(exercise);
     setExerciseName(exercise.name);
     if (activeDay) setDayLabel(activeDay.label);
     setDifficulty('just_right');
@@ -323,11 +331,7 @@ function PlanView() {
               <select
                 id="feedback-exercise-name"
                 value={exerciseName}
-                onChange={(e) => {
-                  setExerciseName(e.target.value);
-                  const ex = selectedDayObject?.exercises.find((item) => item.name === e.target.value);
-                  if (ex) setSelectedExercise(ex);
-                }}
+                onChange={(e) => setExerciseName(e.target.value)}
                 className="form-select"
                 required
               >
