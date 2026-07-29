@@ -42,6 +42,7 @@ class LiveSessionResultRequest(BaseModel):
     reps: int
     good: int
     bad: int
+    cv_session_id: Optional[str] = None
 
 
 @router.post("/result")
@@ -54,6 +55,7 @@ async def save_live_session_result(body: LiveSessionResultRequest, token: str = 
         "reps": body.reps,
         "good": body.good,
         "bad": body.bad,
+        "cv_session_id": body.cv_session_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     get_live_sessions_table().put_item(Item=item)

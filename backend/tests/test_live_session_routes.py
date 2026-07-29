@@ -65,3 +65,29 @@ def test_save_result_rejects_missing_bff_token():
     body = {"exercise_id": "x", "exercise_name": "X", "reps": 0, "good": 0, "bad": 0}
     r = client.post("/api/live-session/result", json=body)
     assert r.status_code in (401, 403)
+
+
+def test_save_result_persists_cv_session_id_when_provided(dynamo_table):
+    client = _client()
+    body = {
+        "exercise_id": "biceps_curl", "exercise_name": "Biceps Curl",
+        "reps": 8, "good": 6, "bad": 2, "cv_session_id": "cv-abc123",
+    }
+    r = client.post("/api/live-session/result", json=body, headers=_auth_header())
+    assert r.status_code == 200
+    result = r.json()
+
+    table = dynamo_table.Table(LIVE_SESSIONS_TABLE_NAME)
+    stored = table.get_item(Key={"session_id": result["session_id"]}).get("Item")
+    assert stored["cv_session_id"] == "cv-abc123"
+
+
+def test_save_result_cv_session_id_defaults_to_none(dynamo_table):
+    client = _client()
+    body = {"exercise_id": "x", "exercise_name": "X", "reps": 0, "good": 0, "bad": 0}
+    r = client.post("/api/live-session/result", json=body, headers=_auth_header())
+    result = r.json()
+
+    table = dynamo_table.Table(LIVE_SESSIONS_TABLE_NAME)
+    stored = table.get_item(Key={"session_id": result["session_id"]}).get("Item")
+    assert stored.get("cv_session_id") is None
