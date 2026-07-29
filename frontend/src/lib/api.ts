@@ -113,9 +113,30 @@ export interface WorkoutSession {
   eligible_for_review: boolean;
 }
 
+export interface ParsedExercise {
+  name: string;
+  sets: number | null;
+  reps: string | null;
+  rest: string | null;
+  rpe: string | null;
+  muscle_group: string | null;
+  replaced_from: string | null;
+  adjustment_reason: string | null;
+}
+
+export interface ParsedDay {
+  day_number: number;
+  label: string;
+  target_focus: string;
+  warmup: string | null;
+  exercises: ParsedExercise[];
+}
+
 export interface SessionPlanResponse {
-  status: 'ready' | 'pending';
+  status: 'ready' | 'pending' | 'failed';
   plan: string | null;
+  error?: string | null;
+  days: ParsedDay[] | null;
 }
 
 export interface ValidateImageResponse {
