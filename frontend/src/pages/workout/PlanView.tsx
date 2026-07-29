@@ -3,130 +3,77 @@ import { useParams } from 'react-router-dom';
 import {
   getSessionPlan,
   submitFeedback,
-  type ExerciseAdjustment,
   type ExerciseFeedback,
+  type ParsedDay,
+  type ParsedExercise,
   type SessionPlanResponse,
 } from '../../lib/api';
-
-interface ExerciseItem {
-  id: string;
-  name: string;
-  muscle: string;
-  setsReps: string;
-  rpeRest: string;
-  replacedFrom?: string;
-  adjustmentReason?: string;
-}
-
-interface RoutineDay {
-  dayId: string;
-  label: string;
-  targetFocus: string;
-  warmup: string;
-  exercises: ExerciseItem[];
-}
-
-const DEFAULT_DAYS: RoutineDay[] = [
-  {
-    dayId: 'day1',
-    label: 'Day 1 - Push Focus',
-    targetFocus: 'CHEST, TRICEPS & FRONT DELTS',
-    warmup: '5-10 mins light cardio, 2 sets of 15 face pulls, dynamic shoulder circles.',
-    exercises: [
-      { id: 'e1', name: 'Incline Dumbbell Press', muscle: 'Upper Chest', setsReps: '4 sets × 8-10 reps', rpeRest: 'RPE 8 · 90s rest' },
-      { id: 'e2', name: 'Flat Barbell Bench Press', muscle: 'Mid Chest', setsReps: '3 sets × 6-8 reps', rpeRest: 'RPE 8.5 · 120s rest' },
-      { id: 'e3', name: 'Standing Overhead Press', muscle: 'Front Delts', setsReps: '3 sets × 8-10 reps', rpeRest: 'RPE 8 · 90s rest' },
-      { id: 'e4', name: 'Cable Lateral Raises', muscle: 'Side Delts', setsReps: '4 sets × 12-15 reps', rpeRest: 'RPE 9 · 60s rest' },
-      { id: 'e5', name: 'Tricep Rope Pushdowns', muscle: 'Triceps', setsReps: '3 sets × 10-12 reps', rpeRest: 'RPE 8.5 · 60s rest' },
-    ],
-  },
-  {
-    dayId: 'day2',
-    label: 'Day 2 - Pull Focus',
-    targetFocus: 'BACK, BICEPS & REAR DELTS',
-    warmup: '5 mins rower, scapular pull-ups, lat band warm-ups.',
-    exercises: [
-      { id: 'e6', name: 'Lat Pulldowns (Wide Grip)', muscle: 'Lats & Upper Back', setsReps: '4 sets × 8-10 reps', rpeRest: 'RPE 8 · 90s rest' },
-      { id: 'e7', name: 'Chest-Supported Row', muscle: 'Mid-Back & Rhomboids', setsReps: '3 sets × 8-10 reps', rpeRest: 'RPE 8 · 90s rest' },
-      { id: 'e8', name: 'Reverse Pec Deck Flyes', muscle: 'Rear Delts', setsReps: '4 sets × 12-15 reps', rpeRest: 'RPE 9 · 60s rest' },
-      { id: 'e9', name: 'Incline Dumbbell Bicep Curls', muscle: 'Biceps Long Head', setsReps: '3 sets × 10-12 reps', rpeRest: 'RPE 8 · 60s rest' },
-    ],
-  },
-  {
-    dayId: 'day3',
-    label: 'Day 3 - Leg Focus',
-    targetFocus: 'QUADS, HAMSTRINGS & GLUTES',
-    warmup: '5 mins stationary bike, leg swings, hip opening stretch.',
-    exercises: [
-      { id: 'e10', name: 'Barbell Back Squats', muscle: 'Quads & Glutes', setsReps: '4 sets × 6-8 reps', rpeRest: 'RPE 8.5 · 150s rest' },
-      { id: 'e11', name: 'Romanian Deadlifts (RDL)', muscle: 'Hamstrings & Glutes', setsReps: '3 sets × 8-10 reps', rpeRest: 'RPE 8 · 120s rest' },
-      { id: 'e12', name: 'Leg Press (Wide Stance)', muscle: 'Quads & Adductors', setsReps: '3 sets × 10-12 reps', rpeRest: 'RPE 8 · 90s rest' },
-      { id: 'e13', name: 'Seated Calf Raises', muscle: 'Calves', setsReps: '4 sets × 15 reps', rpeRest: 'RPE 9 · 45s rest' },
-    ],
-  },
-  {
-    dayId: 'day4',
-    label: 'Day 4 - Core & Stability',
-    targetFocus: 'ABS, LOWER BACK & CORE',
-    warmup: 'Cat-cow stretches, bird-dogs, plank holds.',
-    exercises: [
-      { id: 'e14', name: 'Hanging Leg Raises', muscle: 'Abdominals', setsReps: '3 sets × 12-15 reps', rpeRest: 'RPE 8.5 · 60s rest' },
-      { id: 'e15', name: 'Ab Wheel Rollouts', muscle: 'Core Stability', setsReps: '3 sets × 10 reps', rpeRest: 'RPE 8 · 60s rest' },
-      { id: 'e16', name: 'Cable Woodchoppers', muscle: 'Obliques', setsReps: '3 sets × 12 reps', rpeRest: 'RPE 8 · 60s rest' },
-    ],
-  },
-];
 
 function PlanView() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [planData, setPlanData] = useState<SessionPlanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Interactive Days & Exercises State
-  const [routineDays, setRoutineDays] = useState<RoutineDay[]>(DEFAULT_DAYS);
-  const [activeDayId, setActiveDayId] = useState<string>('day1');
+  const [activeDayId, setActiveDayId] = useState<number | null>(null);
 
-  // Feedback State with Dropdown Selections
-  const [selectedExercise, setSelectedExercise] = useState<ExerciseItem | null>(null);
-  const [dayLabel, setDayLabel] = useState<string>('Day 1 - Push Focus');
-  const [exerciseName, setExerciseName] = useState<string>('Incline Dumbbell Press');
+  const [dayLabel, setDayLabel] = useState<string>('');
+  const [exerciseName, setExerciseName] = useState<string>('');
   const [difficulty, setDifficulty] = useState<ExerciseFeedback['difficulty']>('just_right');
   const [pain, setPain] = useState(false);
   const [feedbackNote, setFeedbackNote] = useState('');
   const [feedbackResult, setFeedbackResult] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  const loadPlan = () => {
     if (!sessionId) return;
     getSessionPlan(sessionId)
-      .then(setPlanData)
+      .then((data) => {
+        setPlanData(data);
+        const freshDays = data.days ?? [];
+        if (freshDays.length > 0) {
+          setActiveDayId((current) => current ?? freshDays[0].day_number);
+
+          // Resync the feedback form's day/exercise selection against the
+          // refetched data. This matters most right after a swap-triggered
+          // refetch: the previously-selected exercise name may no longer
+          // exist under its old day (it was renamed by the AI adjustment),
+          // so keep the current selection only if it's still valid —
+          // otherwise fall back to the day's first exercise, same pattern
+          // used in handleDaySelectChange.
+          const resolvedDayLabel = dayLabel || freshDays[0].label;
+          const dayForLabel = freshDays.find((d) => d.label === resolvedDayLabel) ?? freshDays[0];
+          setDayLabel(resolvedDayLabel);
+
+          const exerciseStillExists =
+            !!exerciseName && dayForLabel.exercises.some((ex) => ex.name === exerciseName);
+          setExerciseName(exerciseStillExists ? exerciseName : dayForLabel.exercises[0]?.name ?? '');
+        }
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load plan'));
-  }, [sessionId]);
+  };
 
-  const activeDay = routineDays.find((d) => d.dayId === activeDayId) || routineDays[0];
+  useEffect(loadPlan, [sessionId]);
 
-  // Helper to sync exercise options when day selection changes
-  const selectedDayObject = routineDays.find((d) => d.label === dayLabel) || activeDay;
+  const days: ParsedDay[] = planData?.days ?? [];
+  const activeDay = days.find((d) => d.day_number === activeDayId) ?? days[0];
+  const selectedDayObject = days.find((d) => d.label === dayLabel) ?? activeDay;
 
   const handleDaySelectChange = (newDayLabel: string) => {
     setDayLabel(newDayLabel);
-    const dayObj = routineDays.find((d) => d.label === newDayLabel);
+    const dayObj = days.find((d) => d.label === newDayLabel);
     if (dayObj && dayObj.exercises.length > 0) {
       setExerciseName(dayObj.exercises[0].name);
-      setSelectedExercise(dayObj.exercises[0]);
     }
   };
 
-  const handleOpenFeedback = (exercise: ExerciseItem) => {
-    setSelectedExercise(exercise);
+  const handleOpenFeedback = (exercise: ParsedExercise) => {
     setExerciseName(exercise.name);
-    setDayLabel(activeDay.label);
+    if (activeDay) setDayLabel(activeDay.label);
     setDifficulty('just_right');
     setPain(false);
     setFeedbackNote('');
     setFeedbackResult(null);
 
-    // Smooth scroll down to feedback form
     const el = document.getElementById('exercise-feedback-section');
     el?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -142,35 +89,16 @@ function PlanView() {
       ]);
 
       if (result.adjustment_triggered && result.adjustments && result.adjustments.length > 0) {
-        const adj: ExerciseAdjustment = result.adjustments[0];
-        if (adj.new_exercise_name) {
-          // Replace exercise in local routineDays table state live!
-          setRoutineDays((prevDays) =>
-            prevDays.map((d) => {
-              if (d.label === dayLabel || d.dayId === activeDay.dayId) {
-                return {
-                  ...d,
-                  exercises: d.exercises.map((ex) => {
-                    if (ex.name.toLowerCase() === exerciseName.toLowerCase() || (selectedExercise && ex.id === selectedExercise.id)) {
-                      return {
-                        ...ex,
-                        replacedFrom: ex.name,
-                        name: adj.new_exercise_name!,
-                        setsReps: adj.sets && adj.reps ? `${adj.sets} sets × ${adj.reps} reps` : ex.setsReps,
-                        rpeRest: adj.rpe ? `RPE ${adj.rpe} (AI Adjusted)` : ex.rpeRest,
-                        adjustmentReason: adj.reason || 'Adjusted based on feedback & pain report',
-                      };
-                    }
-                    return ex;
-                  }),
-                };
-              }
-              return d;
-            })
-          );
-          setExerciseName(adj.new_exercise_name);
-        }
-        setFeedbackResult(`✨ AI Core Adjusted Routine: Swapped for ${adj.new_exercise_name ?? 'new exercise'}! (${adj.reason})`);
+        const adj = result.adjustments[0];
+        setFeedbackResult(
+          adj.new_exercise_name
+            ? `✨ AI Core Adjusted Routine: Swapped for ${adj.new_exercise_name}! (${adj.reason})`
+            : result.summary ?? 'Feedback recorded and the plan was adjusted.',
+        );
+        // The persisted plan is the source of truth for what changed — refetch
+        // instead of hand-patching local state, so the "AI Replaced" badge
+        // survives a refresh exactly like a fresh page load would show it.
+        loadPlan();
       } else {
         setFeedbackResult(result.summary ?? 'Feedback recorded successfully by AI Core.');
       }
@@ -189,7 +117,7 @@ function PlanView() {
     );
   }
 
-  if (!planData) {
+  if (!planData || planData.status === 'pending') {
     return (
       <div style={{ textAlign: 'center', padding: '80px 0', color: '#94a3b8' }}>
         <p style={{ fontWeight: 600 }}>Loading AI Training Protocol...</p>
@@ -197,9 +125,24 @@ function PlanView() {
     );
   }
 
+  if (planData.status === 'failed') {
+    return (
+      <div style={{ padding: '20px', borderRadius: '12px', background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)', color: '#fda4af' }}>
+        ⚠️ Plan generation failed{planData.error ? `: ${planData.error}` : '.'}
+      </div>
+    );
+  }
+
+  if (!activeDay) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 0', color: '#94a3b8' }}>
+        <p style={{ fontWeight: 600 }}>No training days were found in this plan.</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-      {/* Header & Export Action */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
@@ -217,44 +160,14 @@ function PlanView() {
         </button>
       </div>
 
-      {/* Body Composition Summary Ribbon */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <span style={{ color: '#10b981' }}>⚡</span>
-          <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', color: '#94a3b8', textTransform: 'uppercase' }}>
-            InBody Composition Telemetry
-          </span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '14px' }}>
-          <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', background: 'rgba(7, 10, 17, 0.6)' }}>
-            <span className="metric-val" style={{ fontSize: '26px', color: '#34d399', display: 'block' }}>34.2</span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.05em' }}>SMM (KG)</span>
-          </div>
-          <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', background: 'rgba(7, 10, 17, 0.6)' }}>
-            <span className="metric-val" style={{ fontSize: '26px', color: '#38bdf8', display: 'block' }}>14.5%</span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.05em' }}>BODY FAT %</span>
-          </div>
-          <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', background: 'rgba(7, 10, 17, 0.6)' }}>
-            <span className="metric-val" style={{ fontSize: '26px', color: '#fbbf24', display: 'block' }}>1840</span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.05em' }}>BMR (KCAL)</span>
-          </div>
-          <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', background: 'rgba(7, 10, 17, 0.6)' }}>
-            <span className="metric-val" style={{ fontSize: '26px', color: '#f43f5e', display: 'block' }}>2</span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.05em' }}>FLAGS</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Routine Days Tabs Switcher */}
       <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-        {routineDays.map((day) => {
-          const isActive = day.dayId === activeDay.dayId;
+        {days.map((day) => {
+          const isActive = day.day_number === activeDay.day_number;
           return (
             <button
-              key={day.dayId}
+              key={day.day_number}
               onClick={() => {
-                setActiveDayId(day.dayId);
+                setActiveDayId(day.day_number);
                 setDayLabel(day.label);
                 if (day.exercises.length > 0) setExerciseName(day.exercises[0].name);
               }}
@@ -278,7 +191,6 @@ function PlanView() {
         })}
       </div>
 
-      {/* Active Day Table & Warmup Box */}
       <div className="glass-panel" style={{ padding: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
@@ -286,7 +198,7 @@ function PlanView() {
               {activeDay.label}
             </h2>
             <span style={{ fontSize: '12px', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.05em' }}>
-              TARGET FOCUS: {activeDay.targetFocus}
+              TARGET FOCUS: {activeDay.target_focus}
             </span>
           </div>
 
@@ -295,17 +207,17 @@ function PlanView() {
           </span>
         </div>
 
-        {/* Warmup protocol box */}
-        <div style={{ background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px 18px', marginBottom: '24px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 800, color: '#34d399', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-            WARM-UP & MOBILITY PROTOCOL:
-          </span>
-          <p style={{ fontSize: '13.5px', color: '#cbd5e1', margin: 0 }}>
-            {activeDay.warmup}
-          </p>
-        </div>
+        {activeDay.warmup && (
+          <div style={{ background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px 18px', marginBottom: '24px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#34d399', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+              WARM-UP & MOBILITY PROTOCOL:
+            </span>
+            <p style={{ fontSize: '13.5px', color: '#cbd5e1', margin: 0 }}>
+              {activeDay.warmup}
+            </p>
+          </div>
+        )}
 
-        {/* ROUTINE EXERCISES TABLE */}
         <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '28px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'var(--font-sans)' }}>
             <thead>
@@ -320,7 +232,7 @@ function PlanView() {
             </thead>
             <tbody>
               {activeDay.exercises.map((ex, idx) => (
-                <tr key={ex.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)', background: idx % 2 === 0 ? 'rgba(15, 23, 42, 0.4)' : 'transparent' }}>
+                <tr key={`${ex.name}-${idx}`} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)', background: idx % 2 === 0 ? 'rgba(15, 23, 42, 0.4)' : 'transparent' }}>
                   <td style={{ padding: '16px', fontSize: '14px', fontWeight: 700, color: '#64748b', fontFamily: 'var(--font-mono)' }}>
                     {idx + 1}
                   </td>
@@ -328,27 +240,27 @@ function PlanView() {
                     <div style={{ fontWeight: 700, fontSize: '15px', color: '#f8fafc' }}>
                       {ex.name}
                     </div>
-                    {ex.replacedFrom && (
+                    {ex.replaced_from && (
                       <span className="badge badge-amber" style={{ padding: '2px 6px', fontSize: '10px', marginTop: '4px' }}>
-                        ⚡ AI Replaced (was {ex.replacedFrom})
+                        ⚡ AI Replaced (was {ex.replaced_from})
                       </span>
                     )}
-                    {ex.adjustmentReason && (
+                    {ex.adjustment_reason && (
                       <p style={{ fontSize: '11px', color: '#fbbf24', margin: '2px 0 0 0' }}>
-                        Reason: {ex.adjustmentReason}
+                        Reason: {ex.adjustment_reason}
                       </p>
                     )}
                   </td>
                   <td style={{ padding: '16px' }}>
                     <span className="badge badge-emerald" style={{ padding: '4px 10px', fontSize: '11px' }}>
-                      {ex.muscle}
+                      {ex.muscle_group ?? '—'}
                     </span>
                   </td>
                   <td style={{ padding: '16px', fontSize: '14px', fontWeight: 700, color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
-                    {ex.setsReps}
+                    {ex.sets != null && ex.reps ? `${ex.sets} sets × ${ex.reps} reps` : '—'}
                   </td>
                   <td style={{ padding: '16px', fontSize: '13px', color: '#cbd5e1' }}>
-                    {ex.rpeRest}
+                    {ex.rpe ? `RPE ${ex.rpe}` : ''}{ex.rpe && ex.rest ? ' · ' : ''}{ex.rest ? `${ex.rest} rest` : ''}
                   </td>
                   <td style={{ padding: '16px', textAlign: 'right' }}>
                     <button
@@ -366,7 +278,6 @@ function PlanView() {
           </table>
         </div>
 
-        {/* RAW PLAN OUTPUT ACCORDION */}
         <details style={{ marginTop: '16px' }}>
           <summary style={{ fontSize: '13px', color: '#64748b', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
             View Full Raw AI Plan Stream Text output
@@ -389,18 +300,15 @@ function PlanView() {
           </pre>
         </details>
 
-        {/* EXERCISE FEEDBACK DROPDOWN LOGGING FORM */}
         <div id="exercise-feedback-section" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '24px', marginTop: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <span style={{ color: '#34d399' }}>⚡</span>
             <h4 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.05em', color: '#34d399', textTransform: 'uppercase', margin: 0 }}>
               AI Overload & Exercise Swap Studio
             </h4>
-
           </div>
 
           <form onSubmit={handleFeedbackSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-            {/* Day Label Select Dropdown */}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Training Day</label>
               <select
@@ -410,37 +318,31 @@ function PlanView() {
                 className="form-select"
                 required
               >
-                {routineDays.map((d) => (
-                  <option key={d.dayId} value={d.label} style={{ background: '#0f172a' }}>
+                {days.map((d) => (
+                  <option key={d.day_number} value={d.label} style={{ background: '#0f172a' }}>
                     {d.label}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Exercise Name Select Dropdown */}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Exercise Name</label>
               <select
                 id="feedback-exercise-name"
                 value={exerciseName}
-                onChange={(e) => {
-                  setExerciseName(e.target.value);
-                  const ex = selectedDayObject.exercises.find((item) => item.name === e.target.value);
-                  if (ex) setSelectedExercise(ex);
-                }}
+                onChange={(e) => setExerciseName(e.target.value)}
                 className="form-select"
                 required
               >
-                {selectedDayObject.exercises.map((ex) => (
-                  <option key={ex.id} value={ex.name} style={{ background: '#0f172a' }}>
-                    {ex.name} ({ex.muscle})
+                {(selectedDayObject?.exercises ?? []).map((ex) => (
+                  <option key={ex.name} value={ex.name} style={{ background: '#0f172a' }}>
+                    {ex.name}{ex.muscle_group ? ` (${ex.muscle_group})` : ''}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Difficulty Select Dropdown */}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Difficulty Rating</label>
               <select
@@ -455,7 +357,6 @@ function PlanView() {
               </select>
             </div>
 
-            {/* Pain / Injury Checkbox & Comments Input */}
             <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                 <input

@@ -36,6 +36,12 @@ async def upload_live_session_video(file: UploadFile = File(...), token: str = D
     return proxy_json(resp)
 
 
+@router.get("/report/{session_id}")
+async def get_live_session_report(session_id: str, token: str = Depends(get_verified_token)):
+    resp = await call_upstream("GET", f"/api/sessions/{session_id}", token=None, base_url=CV_API_URL)
+    return proxy_json(resp)
+
+
 class LiveSessionResultRequest(BaseModel):
     exercise_id: str
     exercise_name: str

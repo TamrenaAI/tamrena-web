@@ -60,13 +60,6 @@ def test_save_result_persists_and_returns_item(dynamo_table):
     assert stored["good"] == 6
 
 
-def test_save_result_rejects_missing_bff_token():
-    client = _client()
-    body = {"exercise_id": "x", "exercise_name": "X", "reps": 0, "good": 0, "bad": 0}
-    r = client.post("/api/live-session/result", json=body)
-    assert r.status_code in (401, 403)
-
-
 def test_save_result_persists_cv_session_id_when_provided(dynamo_table):
     client = _client()
     body = {
@@ -91,3 +84,42 @@ def test_save_result_cv_session_id_defaults_to_none(dynamo_table):
     table = dynamo_table.Table(LIVE_SESSIONS_TABLE_NAME)
     stored = table.get_item(Key={"session_id": result["session_id"]}).get("Item")
     assert stored.get("cv_session_id") is None
+
+
+def test_save_result_rejects_missing_bff_token():
+    client = _client()
+    body = {"exercise_id": "x", "exercise_name": "X", "reps": 0, "good": 0, "bad": 0}
+    r = client.post("/api/live-session/result", json=body)
+    assert r.status_code in (401, 403)
+
+
+@respx.mock
+def test_get_report_forwards_to_cv_sessions_endpoint():
+    route = respx.get(f"{CV_API_URL}/api/sessions/abc123").mock(
+        return_value=Response(200, json={
+            "summary": {"total_reps": 8, "good_reps": 6, "bad_reps": 2, "score": 82},
+            "history": [{"number": 1, "score": 90, "good": True}],
+            "rules": [],
+        })
+    )
+    client = _client()
+    r = client.get("/api/live-session/report/abc123", headers=_auth_header())
+    assert r.status_code == 200
+    assert r.json()["summary"]["total_reps"] == 8
+    assert route.called
+
+
+@respx.mock
+def test_get_report_passes_through_404_from_cv():
+    respx.get(f"{CV_API_URL}/api/sessions/missing").mock(
+        return_value=Response(404, json={"detail": "Unknown session 'missing'"})
+    )
+    client = _client()
+    r = client.get("/api/live-session/report/missing", headers=_auth_header())
+    assert r.status_code == 404
+
+
+def test_get_report_rejects_missing_bff_token():
+    client = _client()
+    r = client.get("/api/live-session/report/abc123")
+    assert r.status_code in (401, 403)

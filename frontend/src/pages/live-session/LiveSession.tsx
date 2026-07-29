@@ -2,10 +2,13 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   getLiveSessionWebSocketUrl,
+  getLiveSessionReport,
   saveLiveSessionResult,
   uploadLiveSessionVideo,
   type CvExercise,
+  type CvSessionReport,
 } from '../../lib/api';
+import SessionReportView from './SessionReportView';
 
 interface LiveSessionLocationState {
   exercise: CvExercise;
@@ -34,6 +37,8 @@ function LiveSession() {
   const [liveState, setLiveState] = useState<LiveState>(INITIAL_LIVE_STATE);
   const [frameUrl, setFrameUrl] = useState<string | null>(null);
   const [result, setResult] = useState<{ reps: number; good: number; bad: number } | null>(null);
+  const [cvSessionId, setCvSessionId] = useState<string | null>(null);
+  const [report, setReport] = useState<CvSessionReport | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const frameUrlRef = useRef<string | null>(null);
@@ -63,14 +68,25 @@ function LiveSession() {
     setError(null);
   };
 
-  const finishSession = async (reps: number, good: number, bad: number) => {
+  const finishSession = async (reps: number, good: number, bad: number, sessionId: string | null) => {
     try {
-      await saveLiveSessionResult(exercise.id, exercise.name, reps, good, bad);
+      await saveLiveSessionResult(exercise.id, exercise.name, reps, good, bad, sessionId ?? undefined);
     } catch (err) {
       console.error('Failed to save live session result', err);
     }
     setResult({ reps, good, bad });
+    setCvSessionId(sessionId);
     setPhase('complete');
+
+    if (sessionId) {
+      getLiveSessionReport(sessionId)
+        .then(setReport)
+        .catch((err) => {
+          // Report fetch failure must never block the completion screen —
+          // the plain reps/good/bad tally (already set above) stays valid.
+          console.error('Failed to load session report', err);
+        });
+    }
   };
 
   const startLiveSession = (videoId: string) => {
@@ -94,7 +110,7 @@ function LiveSession() {
           wsRef.current = null;
           ws.close();
           const current = liveStateRef.current;
-          finishSession(data.reps ?? current.reps, current.good, current.bad);
+          finishSession(data.reps ?? current.reps, current.good, current.bad, data.session_id ?? null);
         } else if (data.type === 'error') {
           wsRef.current = null;
           setError(data.message);
@@ -153,6 +169,8 @@ function LiveSession() {
     }
     setFrameUrl(null);
     setResult(null);
+    setCvSessionId(null);
+    setReport(null);
   };
 
   return (
@@ -276,7 +294,9 @@ function LiveSession() {
               </div>
             </div>
 
-            <a href="/exercises" id="live-session-back-link" className="btn btn-primary" style={{ display: 'inline-flex' }}>
+            {report && <SessionReportView report={report} />}
+
+            <a href="/exercises" id="live-session-back-link" className="btn btn-primary" style={{ display: 'inline-flex', marginTop: '20px' }}>
               Return to Exercise Directory →
             </a>
           </div>

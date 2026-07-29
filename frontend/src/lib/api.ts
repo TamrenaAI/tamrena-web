@@ -113,9 +113,30 @@ export interface WorkoutSession {
   eligible_for_review: boolean;
 }
 
+export interface ParsedExercise {
+  name: string;
+  sets: number | null;
+  reps: string | null;
+  rest: string | null;
+  rpe: string | null;
+  muscle_group: string | null;
+  replaced_from: string | null;
+  adjustment_reason: string | null;
+}
+
+export interface ParsedDay {
+  day_number: number;
+  label: string;
+  target_focus: string;
+  warmup: string | null;
+  exercises: ParsedExercise[];
+}
+
 export interface SessionPlanResponse {
-  status: 'ready' | 'pending';
+  status: 'ready' | 'pending' | 'failed';
   plan: string | null;
+  error?: string | null;
+  days: ParsedDay[] | null;
 }
 
 export interface ValidateImageResponse {
@@ -362,6 +383,7 @@ export interface LiveSessionResult {
   good: number;
   bad: number;
   created_at: string;
+  cv_session_id?: string | null;
 }
 
 export async function uploadLiveSessionVideo(file: File): Promise<{ id: string; name: string; size: number }> {
@@ -378,11 +400,15 @@ export async function saveLiveSessionResult(
   reps: number,
   good: number,
   bad: number,
+  cvSessionId?: string,
 ): Promise<LiveSessionResult> {
   const res = await authFetch('/api/live-session/result', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ exercise_id: exerciseId, exercise_name: exerciseName, reps, good, bad }),
+    body: JSON.stringify({
+      exercise_id: exerciseId, exercise_name: exerciseName, reps, good, bad,
+      cv_session_id: cvSessionId ?? null,
+    }),
   });
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to save session result (${res.status})`));
   return res.json();
@@ -488,5 +514,41 @@ export async function getNutritionResult(runId: string): Promise<NutritionResult
   const res = await authFetch(`/api/nutrition/result/${encodeURIComponent(runId)}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load nutrition result (${res.status})`));
+  return res.json();
+}
+
+// ── Live Session Report (proxied to CV via this BFF) ────────────────────
+
+export interface CvRepetition {
+  number: number;
+  good: boolean;
+  score: number;
+}
+
+export interface CvRuleDefinition {
+  name: string;
+  severity: string;
+  message: string;
+}
+
+export interface CvSessionSummary {
+  total_reps: number;
+  good_reps: number;
+  bad_reps: number;
+  accuracy: number;
+  score: number | null;
+  common_errors: Record<string, number>;
+  most_common_error: string | null;
+}
+
+export interface CvSessionReport {
+  summary: CvSessionSummary;
+  history: CvRepetition[];
+  rules: CvRuleDefinition[];
+}
+
+export async function getLiveSessionReport(cvSessionId: string): Promise<CvSessionReport> {
+  const res = await authFetch(`/api/live-session/report/${cvSessionId}`);
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load report (${res.status})`));
   return res.json();
 }
