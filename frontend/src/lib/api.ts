@@ -383,6 +383,7 @@ export interface LiveSessionResult {
   good: number;
   bad: number;
   created_at: string;
+  cv_session_id?: string | null;
 }
 
 export async function uploadLiveSessionVideo(file: File): Promise<{ id: string; name: string; size: number }> {

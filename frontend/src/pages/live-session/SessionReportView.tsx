@@ -18,8 +18,8 @@ function VerdictDot({ cx = 0, cy = 0, payload }: DotProps) {
  * already available in the standalone Computer-Vision app.
  */
 function SessionReportView({ report }: { report: CvSessionReport }) {
-  const points = report.history.map((r) => ({ rep: r.number, score: r.score, good: r.good }));
-  const errorEntries = Object.entries(report.summary.common_errors);
+  const points = (report.history ?? []).map((r) => ({ rep: r.number, score: r.score, good: r.good }));
+  const errorEntries = Object.entries(report.summary?.common_errors ?? {});
   const ruleByName = new Map(report.rules.map((r) => [r.name, r]));
 
   return (
