@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import routes as auth_routes
+from app.coach import routes as coach_routes
 from app.exercises import routes as exercises_routes
 from app.progress import routes as progress_routes
 from app.workout import routes as workout_routes
@@ -53,3 +54,4 @@ app.include_router(exercises_routes.media_router, tags=["exercises-media"])
 app.include_router(workout_routes.router, tags=["workout"])
 app.include_router(live_session_routes.router, tags=["live-session"])
 app.include_router(nutrition_routes.router, tags=["nutrition"])
+app.include_router(coach_routes.router, tags=["coach"])
