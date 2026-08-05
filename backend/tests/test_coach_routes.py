@@ -74,7 +74,7 @@ def test_coach_chat_fetches_and_forwards_nutrition_snapshot_when_run_id_exists()
 
 
 @respx.mock
-def test_coach_chat_forwards_null_snapshot_when_nutrition_service_unreachable():
+def test_coach_chat_forwards_unavailable_sentinel_when_nutrition_service_unreachable():
     user = create_user(username="chatuser3", password="supersecret1")
     set_last_nutrition_run_id(user["id"], "run-abc123")
 
@@ -94,7 +94,7 @@ def test_coach_chat_forwards_null_snapshot_when_nutrition_service_unreachable():
 
     assert r.status_code == 200
     sent_body = json.loads(route.calls.last.request.read())
-    assert sent_body["nutrition_plan_snapshot"] is None
+    assert sent_body["nutrition_plan_snapshot"] == "(nutrition plan temporarily unavailable)"
 
 
 def test_coach_chat_rejects_missing_bff_token():

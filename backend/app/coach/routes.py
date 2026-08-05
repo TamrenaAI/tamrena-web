@@ -27,6 +27,9 @@ class CoachChatRequest(BaseModel):
     message: str
 
 
+NUTRITION_SNAPSHOT_UNAVAILABLE = "(nutrition plan temporarily unavailable)"
+
+
 async def _fetch_nutrition_snapshot(user_id: str) -> Optional[str]:
     run_id = get_last_nutrition_run_id(user_id)
     if not run_id:
@@ -35,11 +38,11 @@ async def _fetch_nutrition_snapshot(user_id: str) -> Optional[str]:
         "GET", f"/api/v1/nutrition/result/{run_id}", token=None, base_url=NUTRITION_API_URL
     )
     if resp is None or resp.status_code != 200:
-        return None
+        return NUTRITION_SNAPSHOT_UNAVAILABLE
     try:
         return json.dumps(resp.json())
     except ValueError:
-        return None
+        return NUTRITION_SNAPSHOT_UNAVAILABLE
 
 
 @router.post("/chat")
