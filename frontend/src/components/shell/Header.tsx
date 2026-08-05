@@ -6,6 +6,7 @@ function getHeaderTitle(pathname: string): { title: string; subtitle: string } {
   if (pathname.startsWith('/nutrition')) return { title: 'AI Nutrition & Macros', subtitle: 'Targeted caloric breakdown and custom dataset meal plans' };
   if (pathname.startsWith('/progress')) return { title: 'Progress & InBody', subtitle: 'Body composition trends, muscle asymmetry & scan history' };
   if (pathname.startsWith('/exercises')) return { title: 'Exercise Directory & CV Coach', subtitle: 'Pose check library and live computer vision rep tracker' };
+  if (pathname.startsWith('/coach')) return { title: 'AI Coach Chat', subtitle: 'Ask about your training and nutrition plan' };
   return { title: 'Tamreena-AI', subtitle: 'Your Intelligent Fitness Assistant' };
 }
 

@@ -85,6 +85,8 @@ function CoachChat() {
                 background: m.role === 'user' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(30, 41, 59, 0.6)',
                 border: m.role === 'user' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
                 color: '#f8fafc',
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'break-word',
               }}
             >
               {m.content}
@@ -122,7 +124,6 @@ function CoachChat() {
             }
           }}
           placeholder="Ask about your workout or nutrition plan..."
-          disabled={sending}
           style={{
             flex: 1,
             padding: '12px 16px',
