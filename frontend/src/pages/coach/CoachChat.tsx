@@ -62,7 +62,7 @@ function CoachChat() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)', maxWidth: '760px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 134px)', maxWidth: '760px', margin: '0 auto' }}>
       <div
         ref={scrollRef}
         className="glass-panel"
