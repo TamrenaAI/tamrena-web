@@ -57,3 +57,9 @@ async def coach_chat(body: CoachChatRequest, token: str = Depends(get_verified_t
         json={"message": body.message, "nutrition_plan_snapshot": snapshot},
     )
     return proxy_json(resp)
+
+
+@router.get("/history")
+async def coach_history(token: str = Depends(get_verified_token)):
+    resp = await call_upstream("GET", "/coach/history", token=token)
+    return proxy_json(resp)

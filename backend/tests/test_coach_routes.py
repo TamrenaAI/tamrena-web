@@ -101,3 +101,30 @@ def test_coach_chat_rejects_missing_bff_token():
     client = _client()
     r = client.post("/api/coach/chat", json={"message": "hello"})
     assert r.status_code in (401, 403)
+
+
+@respx.mock
+def test_coach_history_forwards_token_and_returns_upstream_messages():
+    user = create_user(username="historyuser1", password="supersecret1")
+    route = respx.get(f"{WORKOUT_API_URL}/coach/history").mock(
+        return_value=Response(200, json={"messages": [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "hello"},
+        ]})
+    )
+
+    client = _client()
+    r = client.get("/api/coach/history", headers=_auth_header_for(user["id"]))
+
+    assert r.status_code == 200
+    assert r.json() == {"messages": [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "hello"},
+    ]}
+    assert "Authorization" in route.calls.last.request.headers
+
+
+def test_coach_history_rejects_missing_bff_token():
+    client = _client()
+    r = client.get("/api/coach/history")
+    assert r.status_code in (401, 403)
