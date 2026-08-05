@@ -91,3 +91,17 @@ def verify_password(username: str, password: str) -> Optional[dict]:
     if not bcrypt.checkpw(password.encode("utf-8"), item["password_hash"].encode("utf-8")):
         return None
     return _serialize(item)
+
+
+def get_last_nutrition_run_id(user_id: str) -> Optional[str]:
+    resp = get_users_table().get_item(Key={"user_id": user_id})
+    item = resp.get("Item")
+    return item.get("last_nutrition_run_id") if item else None
+
+
+def set_last_nutrition_run_id(user_id: str, run_id: str) -> None:
+    get_users_table().update_item(
+        Key={"user_id": user_id},
+        UpdateExpression="SET last_nutrition_run_id = :run_id",
+        ExpressionAttributeValues={":run_id": run_id},
+    )

@@ -37,6 +37,7 @@ _VALID_BODY = {
 
 @respx.mock
 def test_generate_forwards_body_and_omits_auth_header():
+    respx.post(f"{NUTRITION_API_URL}/generate-plan").mock(return_value=Response(404))
     route = respx.post(f"{NUTRITION_API_URL}/api/v1/nutrition/generate").mock(
         return_value=Response(202, json={"run_id": "abc123", "status": "started", "message": "Started."})
     )
@@ -94,3 +95,29 @@ def test_get_result_rejects_missing_bff_token():
     client = _client()
     r = client.get("/api/nutrition/result/abc123")
     assert r.status_code in (401, 403)
+
+
+@respx.mock
+def test_generate_persists_last_nutrition_run_id_on_success():
+    respx.post(f"{NUTRITION_API_URL}/generate-plan").mock(return_value=Response(404))
+    respx.post(f"{NUTRITION_API_URL}/api/v1/nutrition/generate").mock(
+        return_value=Response(202, json={"run_id": "abc123", "status": "started", "message": "Started."})
+    )
+    client = _client()
+    r = client.post("/api/nutrition/generate", json=_VALID_BODY, headers=_auth_header())
+    assert r.status_code == 202
+
+    from app.auth import models
+    assert models.get_last_nutrition_run_id("507f1f77bcf86cd799439011") == "abc123"
+
+
+@respx.mock
+def test_generate_does_not_persist_run_id_on_upstream_failure():
+    respx.post(f"{NUTRITION_API_URL}/generate-plan").mock(return_value=Response(500))
+    respx.post(f"{NUTRITION_API_URL}/api/v1/nutrition/generate").mock(return_value=Response(500))
+    client = _client()
+    r = client.post("/api/nutrition/generate", json=_VALID_BODY, headers=_auth_header())
+    assert r.status_code == 500
+
+    from app.auth import models
+    assert models.get_last_nutrition_run_id("507f1f77bcf86cd799439011") is None

@@ -65,3 +65,22 @@ def test_get_user_by_id_returns_none_for_malformed_input():
     # the way the old Mongo version did (via InvalidId).
     assert models.get_user_by_id("") is None
     assert models.get_user_by_id(None) is None
+
+
+def test_set_and_get_last_nutrition_run_id():
+    user = models.create_user(username="nutritionuser", password="supersecret1")
+    assert models.get_last_nutrition_run_id(user["id"]) is None
+
+    models.set_last_nutrition_run_id(user["id"], "run-abc123")
+    assert models.get_last_nutrition_run_id(user["id"]) == "run-abc123"
+
+
+def test_set_last_nutrition_run_id_overwrites_previous_value():
+    user = models.create_user(username="nutritionuser2", password="supersecret1")
+    models.set_last_nutrition_run_id(user["id"], "run-first")
+    models.set_last_nutrition_run_id(user["id"], "run-second")
+    assert models.get_last_nutrition_run_id(user["id"]) == "run-second"
+
+
+def test_get_last_nutrition_run_id_returns_none_for_unknown_user():
+    assert models.get_last_nutrition_run_id("does-not-exist") is None

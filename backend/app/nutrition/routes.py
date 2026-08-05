@@ -19,6 +19,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import get_verified_token, get_verified_token_for_stream
+from app.auth.models import set_last_nutrition_run_id
+from app.auth.tokens import decode_access_token
 from app.config import NUTRITION_API_URL
 from app.tamreena_client import call_upstream, proxy_json
 
@@ -52,6 +54,13 @@ async def generate_nutrition_plan(body: NutritionGenerateRequest, token: str = D
         resp = await call_upstream(
             "POST", "/api/v1/nutrition/generate", token=None, base_url=NUTRITION_API_URL, json=body.model_dump()
         )
+    if resp is not None and resp.status_code == 202:
+        try:
+            run_id = resp.json().get("run_id")
+        except ValueError:
+            run_id = None
+        if run_id:
+            set_last_nutrition_run_id(decode_access_token(token), run_id)
     return proxy_json(resp)
 
 
