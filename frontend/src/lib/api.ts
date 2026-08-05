@@ -562,3 +562,28 @@ export async function getLiveSessionReport(cvSessionId: string): Promise<CvSessi
   if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load report (${res.status})`));
   return res.json();
 }
+
+// ── Coach Chat (proxied to Tamreena_AI via this BFF) ────────────────────
+
+export interface CoachMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export async function getCoachHistory(): Promise<CoachMessage[]> {
+  const res = await authFetch('/api/coach/history');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to load chat history (${res.status})`));
+  const body = await res.json();
+  return body.messages;
+}
+
+export async function sendCoachMessage(message: string): Promise<string> {
+  const res = await authFetch('/api/coach/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, `Failed to send message (${res.status})`));
+  const body = await res.json();
+  return body.response;
+}

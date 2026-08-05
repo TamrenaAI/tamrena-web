@@ -15,6 +15,7 @@ import NutritionIntake from './pages/nutrition/NutritionIntake';
 import NutritionGenerating from './pages/nutrition/NutritionGenerating';
 import NutritionResults from './pages/nutrition/NutritionResults';
 import LiveSession from './pages/live-session/LiveSession';
+import CoachChat from './pages/coach/CoachChat';
 import { getToken } from './lib/api';
 
 function SignInRoute() {
@@ -48,6 +49,7 @@ function App() {
             <Route path="/progress" element={<ProgressTab />} />
             <Route path="/exercises" element={<ExercisesHub />} />
             <Route path="/exercises/detail" element={<ExerciseDetail />} />
+            <Route path="/coach" element={<CoachChat />} />
             <Route path="/nutrition" element={<Navigate to="/nutrition/intake" replace />} />
             <Route path="/nutrition/intake" element={<NutritionIntake />} />
             <Route path="/nutrition/generating" element={<NutritionGenerating />} />
